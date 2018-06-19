@@ -1,0 +1,15 @@
+enclave {
+    from "sgx_tae_service.edl" import *;
+
+    untrusted {
+        void ocall_print([in,string] const char *str);
+        void ocall_response(int fd,[in,size=len] const char *buff, size_t len);
+    };
+
+    trusted {
+        public int ecall_init(void);
+        public void ecall_finish(void);
+        public int ecall_query(int fd,[in,size=len] const char *buff, size_t len);
+    };
+};
+

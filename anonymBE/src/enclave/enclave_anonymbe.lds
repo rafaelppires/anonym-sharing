@@ -1,0 +1,9 @@
+enclave_anonymbe.so
+{
+    global:
+        g_global_data_sim;
+        g_global_data;
+        enclave_anonymbe_entry;
+    local:
+        *;
+};
