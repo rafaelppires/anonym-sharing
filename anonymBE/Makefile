@@ -20,7 +20,7 @@ SharedEnclFlags := -DENCLAVED -DFAST_UNSAFE -DNOROLLBACKCHECK
 include Makefile.sgx
 include Makefile.in
 
-EnclaveCXXIDirs  := $(SGX_SDK)/include/stlport #$(SGX_SDK)/include/libcxx
+EnclaveCXXIDirs  := $(SGX_SDK)/include/libcxx #$(SGX_SDK)/include/libcxx
 Enclave_IncDirs  := $(SrcDir) $(EnclaveSources) $(SGX_SDK)/include \
                     $(SGX_SDK)/include/tlibc $(SGX_COMMONDIR)
 EnclCInclude     := $(addprefix -I, $(Enclave_IncDirs))

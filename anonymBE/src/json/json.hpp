@@ -40,7 +40,7 @@ SOFTWARE.
 #include <cstddef> // nullptr_t, ptrdiff_t, size_t
 #include <functional> // hash, less
 #include <initializer_list> // initializer_list
-#include <iosfwd> // istream, ostream
+//#include <iosfwd> // istream, ostream
 #include <iterator> // iterator_traits, random_access_iterator_tag
 #include <numeric> // accumulate
 #include <string> // string, stoi, to_string
@@ -55,6 +55,9 @@ SOFTWARE.
 #include <memory> // allocator
 #include <string> // string
 #include <vector> // vector
+
+#include <errno.h>
+#include <iomanip>
 
 /*!
 @brief namespace for Niels Lohmann
@@ -1648,6 +1651,7 @@ characters following those used in parsing the JSON input.  Clears the
 std::istream flags; any input errors (e.g., EOF) will be detected by the first
 subsequent call for input from the std::istream.
 */
+#if 0
 class input_stream_adapter : public input_adapter_protocol
 {
   public:
@@ -1679,6 +1683,7 @@ class input_stream_adapter : public input_adapter_protocol
     std::istream& is;
     std::streambuf& sb;
 };
+#endif
 
 /// input adapter for buffer input
 class input_buffer_adapter : public input_adapter_protocol
@@ -1866,7 +1871,7 @@ class input_adapter
 {
   public:
     // native support
-
+#if 0
     /// input adapter for input stream
     input_adapter(std::istream& i)
         : ia(std::make_shared<input_stream_adapter>(i)) {}
@@ -1874,7 +1879,7 @@ class input_adapter
     /// input adapter for input stream
     input_adapter(std::istream&& i)
         : ia(std::make_shared<input_stream_adapter>(i)) {}
-
+#endif
     input_adapter(const std::wstring& ws)
         : ia(std::make_shared<wide_string_input_adapter<std::wstring>>(ws)) {}
 
@@ -3137,6 +3142,8 @@ scan_number_done:
     /// return the last read token (for errors only).  Will never contain EOF
     /// (an arbitrary value that is not a valid char value, often -1), because
     /// 255 may legitimately occur.  May contain NUL, which should be escaped.
+#include <ios>
+#include <iomanip>
     std::string get_token_string() const
     {
         // escape control characters
@@ -3147,8 +3154,11 @@ scan_number_done:
             {
                 // escape control characters
                 std::stringstream ss;
+                ss << "<U+" << ">";
+#if 0
                 ss << "<U+" << std::setw(4) << std::uppercase << std::setfill('0')
                    << std::hex << static_cast<int>(c) << ">";
+#endif
                 result += ss.str();
             }
             else
@@ -5544,6 +5554,7 @@ class output_vector_adapter : public output_adapter_protocol<CharType>
     std::vector<CharType>& v;
 };
 
+#if 0
 /// output adapter for output streams
 template<typename CharType>
 class output_stream_adapter : public output_adapter_protocol<CharType>
@@ -5564,6 +5575,7 @@ class output_stream_adapter : public output_adapter_protocol<CharType>
   private:
     std::basic_ostream<CharType>& stream;
 };
+#endif
 
 /// output adapter for basic_string
 template<typename CharType, typename StringType = std::basic_string<CharType>>
@@ -5593,8 +5605,10 @@ class output_adapter
     output_adapter(std::vector<CharType>& vec)
         : oa(std::make_shared<output_vector_adapter<CharType>>(vec)) {}
 
+#if 0
     output_adapter(std::basic_ostream<CharType>& s)
         : oa(std::make_shared<output_stream_adapter<CharType>>(s)) {}
+#endif
 
     output_adapter(StringType& s)
         : oa(std::make_shared<output_string_adapter<CharType, StringType>>(s)) {}
@@ -7284,7 +7298,10 @@ class binary_reader
     std::string get_token_string() const
     {
         std::stringstream ss;
+        ss << "XX";
+#if 0
         ss << std::setw(2) << std::uppercase << std::setfill('0') << std::hex << current;
+#endif
         return ss.str();
     }
 
@@ -9385,7 +9402,7 @@ char* to_chars(char* first, char* last, FloatType value)
 // #include <nlohmann/detail/output/output_adapters.hpp>
 
 // #include <nlohmann/detail/value_t.hpp>
-
+#include <libc_mock/libcpp_mock.h>
 
 namespace nlohmann
 {
@@ -9754,7 +9771,10 @@ class serializer
                 case UTF8_REJECT:  // decode found invalid UTF-8 byte
                 {
                     std::stringstream ss;
+                    ss << "XX";
+#if 0
                     ss << std::setw(2) << std::uppercase << std::setfill('0') << std::hex << static_cast<int>(byte);
+#endif
                     JSON_THROW(type_error::create(316, "invalid UTF-8 byte at index " + std::to_string(i) + ": 0x" + ss.str()));
                 }
 
@@ -9782,7 +9802,10 @@ class serializer
         {
             // we finish reading, but do not accept: string was incomplete
             std::stringstream ss;
+            ss << "XX";
+#if 0
             ss << std::setw(2) << std::uppercase << std::setfill('0') << std::hex << static_cast<int>(static_cast<uint8_t>(s.back()));
+#endif
             JSON_THROW(type_error::create(316, "incomplete UTF-8 string; last byte: 0x" + ss.str()));
         }
     }
@@ -16642,7 +16665,8 @@ class basic_json
 
     @since version 1.0.0; indentation character added in version 3.0.0
     */
-    friend std::ostream& operator<<(std::ostream& o, const basic_json& j)
+    template< typename OStream>
+    friend OStream& operator<<(OStream& o, const basic_json& j)
     {
         // read width member and use it as indentation parameter if nonzero
         const bool pretty_print = (o.width() > 0);

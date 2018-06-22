@@ -3,6 +3,7 @@
 #include <sgx_cryptoall.h>
 #include <stdio.h>
 #include <libc_mock/libcpp_mock.h>
+#include <json/json.hpp>
 
 extern int printf(const char*,...);
 //------------------------------------------------------------------------------
@@ -110,10 +111,6 @@ void AnonymBE::process_input( std::string &rep, const char *buff, size_t len ) {
 
 //------------------------------------------------------------------------------
 void AnonymBE::increment() {
-    sgx_status_t ret = 
-           sgx_increment_monotonic_counter( &counter_uuid_, &master_counter_ );
-    if( ret != SGX_SUCCESS )
-        printf("Error incrementing MC: %s\n", err_msg(ret).c_str() );
 }
 
 //------------------------------------------------------------------------------
@@ -132,126 +129,14 @@ void AnonymBE::set_negative_response( std::string &rep, const std::string &key,
 
 //------------------------------------------------------------------------------
 int AnonymBE::input_file( const std::string &data ) {
-    if( init_ ) {
-        printf("Input files must be loaded before initialization\n");
-        return -1;
-    } else if( error_ == AMCS_ROLLBACK_ATTACK ) {
-        error_ = AMCS_NOERROR;
-    }
-
-    size_t pos = magic.size() + sizeof(counter_uuid_);
-    if( data.size() < magic.size() || data.substr(0,magic.size()) != magic ) {
-        printf("Bad magic\n");
-        return -3;
-    } else if( data.size() >= pos ) {
-        std::string uuid = data.substr( magic.size(), sizeof(counter_uuid_) );
-        memcpy( &counter_uuid_, uuid.c_str(), uuid.size() );
-
-        if( data.size() >= pos + sizeof(master_counter_) ) {
-            uint32_t version;
-            std::string v = data.substr(pos, sizeof(master_counter_) );
-            pos += sizeof(master_counter_);
-            memcpy( &version, v.c_str(), v.size() );
-            printf("File version: %u\n", version);
-            if( version > loaded_file_version_ ) {
-                loaded_file_version_ = version;
-                counter_table_.clear();
-                while( data.size() - pos >= 36 ) {
-                    counter_table_[ data.substr(pos,32) ] = 
-                                      *(uint32_t*)data.substr(pos+32,4).c_str();
-                    pos += 36;
-                }
-            }
-        }
-        return 0;
-    }
-    return -4;
 }
 
 //------------------------------------------------------------------------------
 int AnonymBE::init() {
-    if( init_ && 
-        (error_ == AMCS_ERROR_SERVICE || error_ == AMCS_INITIALIZATION_FAIL) )
-        init_ = false;
-    else if( error_ == AMCS_ROLLBACK_ATTACK ) {
-        printf( "Rollback attack detected. "
-                "Cannot init unless the correct file is loaded\n");
-        init_ = false;
-        return error_;
-    } else if( init_ )
-        return AMCS_ALREADYINITIALIZED;
+}
 
-    sgx_status_t ret; 
-
-    int busy_retry_times = 2;
-    do {
-        ret = sgx_create_pse_session();
-    } while( ret == SGX_ERROR_BUSY && busy_retry_times-- );
-
-    if( ret != SGX_SUCCESS ) {
-        error_ = AMCS_ERROR_SERVICE;
-        printf("%s: %s\n", err_amcs(error_).c_str(), err_msg(ret).c_str() );
-        return error_;
-    } else {
-        bool create = false;
-        error_ = AMCS_NOERROR;
-        sgx_mc_uuid_t dummy;
-        memset( &dummy, 0, sizeof(dummy) );
-        if( memcmp( &dummy, &counter_uuid_, sizeof(dummy) ) == 0 ) {
-            ret = sgx_create_monotonic_counter( &counter_uuid_, 
-                                                &master_counter_ );
-            create = true;
-            printf("Created counter\n");
-        } else {
-            ret = sgx_read_monotonic_counter(&counter_uuid_, &master_counter_);
-        }
-
-        if( ret != SGX_SUCCESS ) {
-            error_ = AMCS_INITIALIZATION_FAIL;
-            printf("%s counter: %s\n", create ? "create" : "read", 
-                                       err_msg(ret).c_str() );
-            return error_;
-        } else error_ = AMCS_NOERROR;
-    }
-
-    sgx_thread_condattr_t unused1;
-    printmsg_onerror( sgx_thread_cond_init( &update_condition_, &unused1 ),
-                      "Error creating condition var" );
-
-    printmsg_onerror( sgx_thread_cond_init( &goahead_condition_, &unused1 ),
-                      "Error creating condition var" );
-
-    printmsg_onerror( sgx_thread_cond_init( &end_condition_, &unused1 ),
-                      "Error creating condition var" );
-
-    sgx_thread_mutexattr_t unused2;
-    printmsg_onerror( sgx_thread_mutex_init( &update_mutex_, &unused2),
-                      "Error creating mutex" );
-
-    printf("MC(%s) = %d\n", Crypto::printable(std::string((const char*)&counter_uuid_, sizeof(counter_uuid_))).c_str(), master_counter_);
-    if( 
-#if NOROLLBACKCHECK
-        false
-#else
-        loaded_file_version_ < master_counter_ 
-#endif
-      ) {
-#ifdef FAST_UNSAFE
-        if( master_counter_ - loaded_file_version_ == 1 ) {
-            printf("Versions differ by 1. Possible rollback attack.\n");
-            increment();
-            init_ = true;
-        } else {
-#endif
-        printf("Rollback attack detected\n");
-        error_ = AMCS_ROLLBACK_ATTACK;
-        init_ = false;
-#ifdef FAST_UNSAFE
-        }
-#endif
-    } else
-        init_ = true;
-    return (int)error_;
+//------------------------------------------------------------------------------
+void AnonymBE::finish() {
 }
 
 //------------------------------------------------------------------------------
@@ -260,29 +145,6 @@ bool AnonymBE::printmsg_onerror( int ret, const char *msg ) {
         printf("%s: %s\n", msg, err_msg(ret).c_str() );
     return ret == SGX_SUCCESS;
 } 
-
-//------------------------------------------------------------------------------
-void AnonymBE::finish() {
-    // signal other threads to finish
-    sgx_thread_mutex_lock(&update_mutex_);
-    die_ = true;
-    sgx_thread_cond_broadcast( &update_condition_ );
-    // wait signal from update thread
-    sgx_thread_cond_wait( &end_condition_, &update_mutex_ );
-    sgx_thread_mutex_unlock(&update_mutex_);
-
-    printmsg_onerror( sgx_close_pse_session(), "Error closing PS session" );
-    printmsg_onerror( sgx_thread_cond_destroy( &update_condition_ ),
-                                             "Error destroying condition var" );
-    printmsg_onerror( sgx_thread_cond_destroy( &goahead_condition_ ),
-                                             "Error destroying condition var" );
-    printmsg_onerror( sgx_thread_cond_destroy( &end_condition_ ),
-                                             "Error destroying condition var" );
-    printmsg_onerror( sgx_thread_mutex_destroy( &update_mutex_ ),
-                                            "Error destroying mutex" );
-
-    //wait other threads
-}
 
 //------------------------------------------------------------------------------
 std::string AnonymBE::err_msg( int v ) {
