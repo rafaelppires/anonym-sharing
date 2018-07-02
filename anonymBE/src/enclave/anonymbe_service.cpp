@@ -27,83 +27,86 @@ AnonymBE::AnonymBE() : init_(false), error_(AMCS_NOERROR), update_number_(0),
 }
 
 //------------------------------------------------------------------------------
-bool AnonymBE::check_format( const std::string &verb, const std::string &operation,
-                         const std::string &input, std::string &output ) {
+bool AnonymBE::http_parse( const std::string &input, std::string &verb,
+                           std::string &command, std::string &content ) {
     size_t pos;
-    std::string urlbeg("/monotonicCounter/");
-
-    if( (pos = input.find(verb)) != std::string::npos ) {
-        if( (pos = input.find( urlbeg, pos+verb.size() )) 
-                                                         != std::string::npos) {
-            pos += urlbeg.size();
-            size_t pos1;
-            if( (pos1 = input.find("/", pos)) != std::string::npos ) {
-                std::string id = input.substr(pos,pos1-pos).c_str();
-                if( input.find( operation, pos1+1 ) != std::string::npos ) {
-                    output = id;
+    if( input.find("HTTP/") != std::string::npos ) {
+       if( (pos=input.find(' ')) != std::string::npos ) {
+            verb = input.substr(0,pos);
+            size_t pos1; ++pos;
+            if( (pos1=input.find(' ', pos)) != std::string::npos ) {
+                command = input.substr(pos,pos1-pos);
+                ++pos1;
+                if( (pos=input.find("\n\n")) != std::string::npos ) {
+                    content = input.substr( pos+2 );
+                    return true;
+                } else if( (pos=input.find("\r\n\r\n")) != std::string::npos ) {
+                    content = input.substr( pos+4 );
                     return true;
                 }
             }
-        }
+       }
     }
     return false;
+}
+
+//------------------------------------------------------------------------------
+void AnonymBE::process_get( const std::string &command, 
+                            const std::string &content ) {
+    if       ( command == "/access/rights" ) {
+    } else if( command == "/verifier/certify" ) {
+    } else if( command == "/verifier/envelope" ) {
+    }
+}
+
+//------------------------------------------------------------------------------
+void AnonymBE::process_put( const std::string &command, 
+                            const std::string &content ) {
+    if       ( command == "/access/usergroup" ) {
+    } else if( command == "/access/aclmember" ) {
+    } else if( command == "/access/bucketowner" ) {
+    }
+}
+
+//------------------------------------------------------------------------------
+void AnonymBE::process_post( const std::string &command, 
+                             const std::string &content ) {
+    if       ( command == "/access/user" ) {
+    } else if( command == "/access/group" ) {
+    } else if( command == "/access/acl" ) {
+    } else if( command == "/verifier/acl" ) {
+    } else if( command == "/writer/bucket" ) {
+    }
+}
+
+//------------------------------------------------------------------------------
+void AnonymBE::process_delete( const std::string &command, 
+                               const std::string &content ) {
+    if       ( command == "/access/usergroup" ) {
+    } else if( command == "/access/aclmember" ) {
+    }
 }
 
 //------------------------------------------------------------------------------
 void AnonymBE::process_input( std::string &rep, const char *buff, size_t len ) {
     if( !init_ ) init();
 
-    std::string input(buff,len), id;
+    std::string input(buff,len), id, verb, command, content;
     bool post, put, get;
-    int value = -1;
     AMCSError error = AMCS_NOERROR;
 
-    if( !(post = check_format( "POST", "counter", input, id )) && 
-        !(put  = check_format( "PUT",  "inc",     input, id )) && 
-        !(get  = check_format( "GET",  "get",     input, id )) )
-        error = AMCS_BAD_REQUEST;
-    else {
-        error = AMCS_NOERROR;
-        std::string hash = Crypto::sha256( id );
-        if( post ) {
-            if( counter_table_.find(hash) != counter_table_.end() )
-                error = AMCS_CREATE_EXISTENT;
-            else {
-                sgx_thread_mutex_lock(&update_mutex_);
-                value = counter_table_[hash] = 0;
-            }
-        } else if( put ) {
-            if( counter_table_.find(hash) == counter_table_.end() )
-                error = AMCS_NON_EXISTENT;
-            else {
-                sgx_thread_mutex_lock(&update_mutex_);
-                value = ++counter_table_[hash];
-            }
-        } else if( get ) {
-            if( counter_table_.find(hash) == counter_table_.end() )
-                error = AMCS_NON_EXISTENT;
-            else {
-//                sgx_thread_mutex_lock(&update_mutex_);
-                value = counter_table_[hash];
-//                sgx_thread_mutex_unlock(&update_mutex_);
-            }
+    if( http_parse( input, verb, command, content ) ) {
+        if       ( verb == "GET" ) {    process_get   ( command, content ); 
+        } else if( verb == "PUT" ) {    process_put   ( command, content );
+        } else if( verb == "POST" ) {   process_post  ( command, content );
+        } else if( verb == "DELETE" ) { process_delete( command, content );
         }
-    }
-
-    if( error == AMCS_NOERROR && (post || put) ) {
-        uint64_t thisupdate = ++update_number_;
-        // signal update thread 
-        sgx_thread_cond_signal( &update_condition_ );
-        // wait until file is written OR increment is made
-        //while( thisupdate > update_written_ && !die_ )
-        //    sgx_thread_cond_wait( &goahead_condition_, &update_mutex_ );
-        if( die_ )
-            error = AMCS_WRAPUP;
-        sgx_thread_mutex_unlock(&update_mutex_);
+    } else {
+        error = AMCS_BAD_REQUEST;
     }
 
     if( error == AMCS_NOERROR )
-        set_positive_response(rep, value);
+        set_positive_response(rep);
     else
         set_negative_response(rep, id, err_amcs(error));
 
@@ -114,9 +117,8 @@ void AnonymBE::increment() {
 }
 
 //------------------------------------------------------------------------------
-void AnonymBE::set_positive_response( std::string &rep, size_t value ) {
-    std::string content = "{\"result\":\"OK\",\"value\":\""
-                                                + std::to_string(value) + "\"}";
+void AnonymBE::set_positive_response( std::string &rep ) {
+    std::string content = "{\"result\":\"OK\"}";
     rep =  posrep + std::to_string(content.size()) + eol + eol + content + eol;
 }
 

@@ -10,7 +10,7 @@ class AnonymBE {
 public:
     AnonymBE();
     void process_input( std::string &rep, const char *buff, size_t len );
-    void set_positive_response( std::string &rep, size_t value );
+    void set_positive_response( std::string &rep );
     void set_negative_response( std::string &rep, const std::string &key,
                                                   const std::string &msg );
     int input_file( const std::string &data );
@@ -31,11 +31,17 @@ private:
         AMCS_WRAPUP
     } error_;
 
+    void process_get( const std::string &command, const std::string &content );
+    void process_put( const std::string &command, const std::string &content );
+    void process_post( const std::string &command, const std::string &content );
+    void process_delete( const std::string &command, 
+                         const std::string &content );
+
     std::string err_msg( int );
     std::string err_amcs( AMCSError e );
     void increment();
-    bool check_format( const std::string &verb, const std::string &operation,
-	                   const std::string &input, std::string &output );
+    bool http_parse( const std::string &input, std::string &verb,
+                           std::string &command, std::string &content );
     bool printmsg_onerror( int ret, const char *msg );
 
     static const std::string eol,posrep,negrep,magic;
