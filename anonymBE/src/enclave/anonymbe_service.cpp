@@ -5,7 +5,6 @@
 #include <libc_mock/libcpp_mock.h>
 #include <json/json.hpp>
 
-extern int printf(const char*,...);
 //------------------------------------------------------------------------------
 const std::string AnonymBE::eol    = "\r\n",
                   AnonymBE::posrep = "HTTP/1.1 200 OK" + eol +
@@ -51,40 +50,48 @@ bool AnonymBE::http_parse( const std::string &input, std::string &verb,
 }
 
 //------------------------------------------------------------------------------
-void AnonymBE::process_get( const std::string &command, 
+using json = nlohmann::json;
+//------------------------------------------------------------------------------
+AnonymBE::AMCSError AnonymBE::process_get( const std::string &command, 
                             const std::string &content ) {
     if       ( command == "/access/rights" ) {
     } else if( command == "/verifier/certify" ) {
     } else if( command == "/verifier/envelope" ) {
     }
+    return AMCS_BAD_REQUEST;
 }
 
 //------------------------------------------------------------------------------
-void AnonymBE::process_put( const std::string &command, 
+AnonymBE::AMCSError AnonymBE::process_put( const std::string &command, 
                             const std::string &content ) {
     if       ( command == "/access/usergroup" ) {
     } else if( command == "/access/aclmember" ) {
     } else if( command == "/access/bucketowner" ) {
     }
+    return AMCS_BAD_REQUEST;
 }
 
 //------------------------------------------------------------------------------
-void AnonymBE::process_post( const std::string &command, 
-                             const std::string &content ) {
+AnonymBE::AMCSError AnonymBE::process_post( const std::string &command, 
+                                            const std::string &content ) {
     if       ( command == "/access/user" ) {
     } else if( command == "/access/group" ) {
+        auto j = json::parse(content);
+        printf("%s\n", j.dump(4).c_str());
     } else if( command == "/access/acl" ) {
     } else if( command == "/verifier/acl" ) {
     } else if( command == "/writer/bucket" ) {
     }
+    return AMCS_BAD_REQUEST;
 }
 
 //------------------------------------------------------------------------------
-void AnonymBE::process_delete( const std::string &command, 
+AnonymBE::AMCSError AnonymBE::process_delete( const std::string &command, 
                                const std::string &content ) {
     if       ( command == "/access/usergroup" ) {
     } else if( command == "/access/aclmember" ) {
     }
+    return AMCS_BAD_REQUEST;
 }
 
 //------------------------------------------------------------------------------
@@ -96,10 +103,14 @@ void AnonymBE::process_input( std::string &rep, const char *buff, size_t len ) {
     AMCSError error = AMCS_NOERROR;
 
     if( http_parse( input, verb, command, content ) ) {
-        if       ( verb == "GET" ) {    process_get   ( command, content ); 
-        } else if( verb == "PUT" ) {    process_put   ( command, content );
-        } else if( verb == "POST" ) {   process_post  ( command, content );
-        } else if( verb == "DELETE" ) { process_delete( command, content );
+        if       ( verb == "GET" ) {
+            error = process_get( command, content ); 
+        } else if( verb == "PUT" ) {    
+            error = process_put( command, content );
+        } else if( verb == "POST" ) {   
+            error = process_post( command, content );
+        } else if( verb == "DELETE" ) { 
+            error = process_delete( command, content );
         }
     } else {
         error = AMCS_BAD_REQUEST;
@@ -125,7 +136,7 @@ void AnonymBE::set_positive_response( std::string &rep ) {
 //------------------------------------------------------------------------------
 void AnonymBE::set_negative_response( std::string &rep, const std::string &key,
                                                     const std::string &msg ) {
-    std::string content = "{\"pkey\":\"" + key + "\",\"msg\":\"" + msg + "\"}";
+    std::string content = "{\"result\":\"error\",\"msg\":\"" + msg + "\"}";
     rep = negrep + std::to_string(content.size()) + eol + eol + content + eol;
 }
 

@@ -31,11 +31,14 @@ private:
         AMCS_WRAPUP
     } error_;
 
-    void process_get( const std::string &command, const std::string &content );
-    void process_put( const std::string &command, const std::string &content );
-    void process_post( const std::string &command, const std::string &content );
-    void process_delete( const std::string &command, 
-                         const std::string &content );
+    AMCSError process_get   ( const std::string &command, 
+                              const std::string &content );
+    AMCSError process_put   ( const std::string &command, 
+                              const std::string &content );
+    AMCSError process_post  ( const std::string &command, 
+                              const std::string &content );
+    AMCSError process_delete( const std::string &command, 
+                              const std::string &content );
 
     std::string err_msg( int );
     std::string err_amcs( AMCSError e );
@@ -60,6 +63,8 @@ private:
     sgx_thread_cond_t update_condition_, goahead_condition_, end_condition_;
     sgx_thread_mutex_t update_mutex_;
 };
+
+extern "C" { int printf(const char *fmt, ...); }
 
 #endif
 
