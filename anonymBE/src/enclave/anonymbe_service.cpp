@@ -53,7 +53,7 @@ bool AnonymBE::http_parse( const std::string &input, std::string &verb,
 using json = nlohmann::json;
 //------------------------------------------------------------------------------
 AnonymBE::AMCSError AnonymBE::process_get( const std::string &command, 
-                            const std::string &content ) {
+                                           const std::string &content ) {
     if       ( command == "/access/rights" ) {
     } else if( command == "/verifier/certify" ) {
     } else if( command == "/verifier/envelope" ) {
@@ -63,7 +63,7 @@ AnonymBE::AMCSError AnonymBE::process_get( const std::string &command,
 
 //------------------------------------------------------------------------------
 AnonymBE::AMCSError AnonymBE::process_put( const std::string &command, 
-                            const std::string &content ) {
+                                           const std::string &content ) {
     if       ( command == "/access/usergroup" ) {
     } else if( command == "/access/aclmember" ) {
     } else if( command == "/access/bucketowner" ) {
@@ -77,7 +77,9 @@ AnonymBE::AMCSError AnonymBE::process_post( const std::string &command,
     if       ( command == "/access/user" ) {
     } else if( command == "/access/group" ) {
         auto j = json::parse(content);
-        printf("%s\n", j.dump(4).c_str());
+        printf("%s\n%s\n", j.at("group_name").get<std::string>().c_str(),
+                           j.at("user_id").get<std::string>().c_str());
+        return AMCS_NOERROR;
     } else if( command == "/access/acl" ) {
     } else if( command == "/verifier/acl" ) {
     } else if( command == "/writer/bucket" ) {
@@ -87,7 +89,7 @@ AnonymBE::AMCSError AnonymBE::process_post( const std::string &command,
 
 //------------------------------------------------------------------------------
 AnonymBE::AMCSError AnonymBE::process_delete( const std::string &command, 
-                               const std::string &content ) {
+                                              const std::string &content ) {
     if       ( command == "/access/usergroup" ) {
     } else if( command == "/access/aclmember" ) {
     }
@@ -98,28 +100,38 @@ AnonymBE::AMCSError AnonymBE::process_delete( const std::string &command,
 void AnonymBE::process_input( std::string &rep, const char *buff, size_t len ) {
     if( !init_ ) init();
 
-    std::string input(buff,len), id, verb, command, content;
+    std::string input(buff,len), verb, command, content, extra;
     bool post, put, get;
     AMCSError error = AMCS_NOERROR;
 
     if( http_parse( input, verb, command, content ) ) {
-        if       ( verb == "GET" ) {
-            error = process_get( command, content ); 
-        } else if( verb == "PUT" ) {    
-            error = process_put( command, content );
-        } else if( verb == "POST" ) {   
-            error = process_post( command, content );
-        } else if( verb == "DELETE" ) { 
-            error = process_delete( command, content );
+        try {
+            if       ( verb == "GET" ) {
+                error = process_get( command, content ); 
+            } else if( verb == "PUT" ) {    
+                error = process_put( command, content );
+            } else if( verb == "POST" ) {   
+                error = process_post( command, content );
+            } else if( verb == "DELETE" ) { 
+                error = process_delete( command, content );
+            }
+
+            if( error == AMCS_BAD_REQUEST ) {
+                extra = "Unknown command '" + command + "'";
+            }
+        } catch( nlohmann::detail::out_of_range &e ) {
+            extra = e.what();
+            error = AMCS_BAD_REQUEST;
         }
     } else {
+        extra = "Error parsing HTML";
         error = AMCS_BAD_REQUEST;
     }
 
     if( error == AMCS_NOERROR )
         set_positive_response(rep);
     else
-        set_negative_response(rep, id, err_amcs(error));
+        set_negative_response(rep, err_amcs(error), extra);
 
 }
 
@@ -129,14 +141,21 @@ void AnonymBE::increment() {
 
 //------------------------------------------------------------------------------
 void AnonymBE::set_positive_response( std::string &rep ) {
-    std::string content = "{\"result\":\"OK\"}";
+    json j;
+    j["result"] = "OK";
+    std::string content = j.dump(2);
     rep =  posrep + std::to_string(content.size()) + eol + eol + content + eol;
 }
 
 //------------------------------------------------------------------------------
-void AnonymBE::set_negative_response( std::string &rep, const std::string &key,
-                                                    const std::string &msg ) {
-    std::string content = "{\"result\":\"error\",\"msg\":\"" + msg + "\"}";
+void AnonymBE::set_negative_response( std::string &rep, const std::string &msg,
+                                                    const std::string &extra ) {
+    json j;
+    j["result"] = "error";
+    j["msg"] = msg;
+    if( extra != "" )
+        j["detail"] = extra;
+    std::string content = j.dump(2);
     rep = negrep + std::to_string(content.size()) + eol + eol + content + eol;
 }
 
@@ -178,8 +197,8 @@ std::string AnonymBE::err_amcs( AMCSError e ) {
     case AMCS_NOERROR:             return "No error";
     case AMCS_INITIALIZATION_FAIL: return "Fail to initialize AnonymBE";
     case AMCS_ERROR_SERVICE:       return "Could not access Platform Services";
-    case AMCS_BAD_REQUEST:         return "Malformed request: "
-                                          "refer to the documentation";
+    case AMCS_BAD_REQUEST:         return "Malformed request. "
+                                          "Please, refer to the documentation";
     case AMCS_CREATE_EXISTENT:     return "Tried to create an existing counter";
     case AMCS_NON_EXISTENT:        return "Tried to get or update a "
                                           "non-existing counter";
