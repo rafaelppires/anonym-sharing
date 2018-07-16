@@ -3,8 +3,8 @@
 
 #include <string>
 #include <sgx_tae_service.h>
-#include <map>
 #include <sgx_thread.h>
+#include <database.h>
 
 class AnonymBE {
 public:
@@ -36,7 +36,7 @@ private:
     AMCSError process_put   ( const std::string &command, 
                               const std::string &content );
     AMCSError process_post  ( const std::string &command, 
-                              const std::string &content );
+                              const std::string &content, KVString &rep );
     AMCSError process_delete( const std::string &command, 
                               const std::string &content );
 
@@ -49,15 +49,11 @@ private:
 
     static const std::string eol,posrep,negrep,magic;
 
-    // file control
-    uint32_t loaded_file_version_;
-
     // internal state
-    std::map< std::string, uint32_t > counter_table_;
-    sgx_mc_uuid_t counter_uuid_;
-    uint32_t master_counter_;
-    uint64_t update_number_, update_written_;
     bool init_, die_;
+
+    // database
+    Database database_;
 
     // synchronization stuff
     sgx_thread_cond_t update_condition_, goahead_condition_, end_condition_;

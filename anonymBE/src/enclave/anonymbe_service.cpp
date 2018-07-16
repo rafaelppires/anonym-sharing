@@ -18,11 +18,9 @@ const std::string AnonymBE::eol    = "\r\n",
                   AnonymBE::magic  = "\xCA\xFE\x41MCS";
 
 //------------------------------------------------------------------------------
-AnonymBE::AnonymBE() : init_(false), error_(AMCS_NOERROR), update_number_(0),
-               update_written_(0), die_(false), loaded_file_version_(0) {
+AnonymBE::AnonymBE() : init_(false), error_(AMCS_NOERROR), die_(false) {
     update_mutex_ = SGX_THREAD_MUTEX_INITIALIZER;
     goahead_condition_ = end_condition_ = update_condition_ = SGX_THREAD_COND_INITIALIZER;
-    memset( &counter_uuid_, 0, sizeof(counter_uuid_) );
 }
 
 //------------------------------------------------------------------------------
@@ -65,6 +63,10 @@ AnonymBE::AMCSError AnonymBE::process_get( const std::string &command,
 AnonymBE::AMCSError AnonymBE::process_put( const std::string &command, 
                                            const std::string &content ) {
     if       ( command == "/access/usergroup" ) {
+        auto j = json::parse(content);
+        database_.add_user2group(j.at("group_name").get<std::string>().c_str(),
+                              j.at("new_member_id").get<std::string>().c_str());
+        return AMCS_NOERROR;
     } else if( command == "/access/aclmember" ) {
     } else if( command == "/access/bucketowner" ) {
     }
@@ -73,12 +75,19 @@ AnonymBE::AMCSError AnonymBE::process_put( const std::string &command,
 
 //------------------------------------------------------------------------------
 AnonymBE::AMCSError AnonymBE::process_post( const std::string &command, 
-                                            const std::string &content ) {
+                                            const std::string &content,
+                                            KVString &response ) {
     if       ( command == "/access/user" ) {
+        auto j = json::parse(content);
+        std::string key = 
+           database_.create_user( j.at("user_id").get<std::string>().c_str() );
+        if( key == "" ) return AMCS_CREATE_EXISTENT;
+        response[ "user_key" ] = key;
+        return AMCS_NOERROR;
     } else if( command == "/access/group" ) {
         auto j = json::parse(content);
-        printf("%s\n%s\n", j.at("group_name").get<std::string>().c_str(),
-                           j.at("user_id").get<std::string>().c_str());
+        database_.create_group( j.at("group_name").get<std::string>().c_str(),
+                                j.at("user_id").get<std::string>().c_str() );
         return AMCS_NOERROR;
     } else if( command == "/access/acl" ) {
     } else if( command == "/verifier/acl" ) {
@@ -106,12 +115,13 @@ void AnonymBE::process_input( std::string &rep, const char *buff, size_t len ) {
 
     if( http_parse( input, verb, command, content ) ) {
         try {
+            KVString response;
             if       ( verb == "GET" ) {
                 error = process_get( command, content ); 
             } else if( verb == "PUT" ) {    
                 error = process_put( command, content );
             } else if( verb == "POST" ) {   
-                error = process_post( command, content );
+                error = process_post( command, content, response );
             } else if( verb == "DELETE" ) { 
                 error = process_delete( command, content );
             }
@@ -120,6 +130,9 @@ void AnonymBE::process_input( std::string &rep, const char *buff, size_t len ) {
                 extra = "Unknown command '" + command + "'";
             }
         } catch( nlohmann::detail::out_of_range &e ) {
+            extra = e.what();
+            error = AMCS_BAD_REQUEST;
+        } catch( std::invalid_argument &e ) {
             extra = e.what();
             error = AMCS_BAD_REQUEST;
         }
@@ -199,7 +212,7 @@ std::string AnonymBE::err_amcs( AMCSError e ) {
     case AMCS_ERROR_SERVICE:       return "Could not access Platform Services";
     case AMCS_BAD_REQUEST:         return "Malformed request. "
                                           "Please, refer to the documentation";
-    case AMCS_CREATE_EXISTENT:     return "Tried to create an existing counter";
+    case AMCS_CREATE_EXISTENT:     return "Tried to create an existing user";
     case AMCS_NON_EXISTENT:        return "Tried to get or update a "
                                           "non-existing counter";
     case AMCS_WRAPUP:              return "Service is being terminated";

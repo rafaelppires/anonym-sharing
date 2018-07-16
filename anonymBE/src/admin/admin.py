@@ -8,6 +8,9 @@ def create_group( owner_id, group_name ):
     return json.dumps( { 'user_id' : owner_id,
                          'group_name' : group_name } )
 
+def create_user( uid ):
+    return json.dumps( { 'user_id' : uid } )
+
 def sync_reqrep( message ):
     TCP_IP = '127.0.0.1'
     TCP_PORT = 4444
@@ -20,6 +23,9 @@ def sync_reqrep( message ):
     return data
 
 URL='http://127.0.0.1:4444'
+r = requests.post( URL + '/access/user',
+                   data=create_user('user02') )
+print(r.text)
 r = requests.post( URL + '/access/group',
-                   data=create_group('user01', 'group01') )
+                   data=create_group('user02', 'group02') )
 print(r.text)
