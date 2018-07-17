@@ -10,7 +10,8 @@ class AnonymBE {
 public:
     AnonymBE();
     void process_input( std::string &rep, const char *buff, size_t len );
-    void set_positive_response( std::string &rep );
+    void set_positive_response( std::string &rep,
+                                const KVString &response );
     void set_negative_response( std::string &rep, const std::string &msg,
                                                   const std::string &detail );
     int input_file( const std::string &data );

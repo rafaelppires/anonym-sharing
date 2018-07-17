@@ -82,7 +82,7 @@ AnonymBE::AMCSError AnonymBE::process_post( const std::string &command,
         std::string key = 
            database_.create_user( j.at("user_id").get<std::string>().c_str() );
         if( key == "" ) return AMCS_CREATE_EXISTENT;
-        response[ "user_key" ] = key;
+        response[ "user_key" ] = Crypto::b64_encode(key);
         return AMCS_NOERROR;
     } else if( command == "/access/group" ) {
         auto j = json::parse(content);
@@ -113,9 +113,9 @@ void AnonymBE::process_input( std::string &rep, const char *buff, size_t len ) {
     bool post, put, get;
     AMCSError error = AMCS_NOERROR;
 
+    KVString response;
     if( http_parse( input, verb, command, content ) ) {
         try {
-            KVString response;
             if       ( verb == "GET" ) {
                 error = process_get( command, content ); 
             } else if( verb == "PUT" ) {    
@@ -142,7 +142,7 @@ void AnonymBE::process_input( std::string &rep, const char *buff, size_t len ) {
     }
 
     if( error == AMCS_NOERROR )
-        set_positive_response(rep);
+        set_positive_response(rep, response);
     else
         set_negative_response(rep, err_amcs(error), extra);
 
@@ -153,9 +153,12 @@ void AnonymBE::increment() {
 }
 
 //------------------------------------------------------------------------------
-void AnonymBE::set_positive_response( std::string &rep ) {
+void AnonymBE::set_positive_response( std::string &rep, const KVString &response ) {
     json j;
     j["result"] = "OK";
+    for( auto &kv : response ) {
+        j[kv.first] = kv.second;
+    }
     std::string content = j.dump(2);
     rep =  posrep + std::to_string(content.size()) + eol + eol + content + eol;
 }
