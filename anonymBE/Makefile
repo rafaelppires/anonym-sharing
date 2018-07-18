@@ -12,6 +12,7 @@ SrcDir=src
 ObjDir=obj
 
 OpenSSLDir= $(realpath ../SGX-OpenSSL/)
+OpenSSLSGXDir=$(OpenSSLDir)/OpenSSL_SGX/
 OSLLEnclaveW=$(OpenSSLDir)/Wrappers/Enclave
 OSLLAppW=$(OpenSSLDir)/Wrappers/App
 
@@ -45,8 +46,7 @@ EnclAllObjs      := $(addprefix $(ObjDir)/, $(EnclaveName)_t.o \
                          ecalls_$(SysName)_t.o anonymbe_service_t.o \
                          sgx_cryptoall_t.o libc_proxy_t.o file_mock_t.o \
                          database_t.o Ocall_wrappers_t.o ) \
-                    $(addprefix $(OpenSSLDir)/OpenSSL_SGX/, libssl.a \
-                                                            libcrypto.a ) \
+                    $(addprefix $(OpenSSLSGXDir), libssl.a libcrypto.a ) \
 
 ############## UNTRUSTED #######################################################
 all: $(EXECUTABLES) $(BinDir)/$(EnclaveName).signed.so
@@ -101,6 +101,14 @@ $(ObjDir)/%_t.o : $(EnclaveSources)/%.cpp | $(ObjDir)
 
 $(ObjDir)/%_t.o : $(SGX_COMMONDIR)/%.cpp | $(ObjDir)
 	@$(call run_and_test,$(CXX) -c $< -o $@ $(Encl_CXXFlags) $(EnclCXXInclude),"CXX SGX")
+
+################# OPENSSL stuff ################################################
+obj/sgx_cryptoall_t.o : $(OpenSSLSGXDir)/libcrypto.a
+$(OpenSSLSGXDir)/libcrypto.a : $(OpenSSLSGXDir)/include
+	@make -C $(OpenSSLSGXDir) depend && make -C $(OpenSSLSGXDir)
+
+$(OpenSSLSGXDir)/include :
+	@cd $(OpenSSLSGXDir) && ./sgx_openssl_setup.sh
 
 $(EnclaveSources)/Ocall_wrappers.cpp :
 	@bash -c "cp $(OSLLEnclaveW)/Ocall_wrappers.{cpp,h} $(OSLLEnclaveW)/ssl_enclave_types.h $(EnclaveSources)" 
