@@ -4,27 +4,37 @@
 #include <stdio.h>
 #include <libc_mock/libcpp_mock.h>
 #include <json/json.hpp>
+#include <sgx_trts.h>
 
+#define KEY_SIZE 32
+
+#define json_str(var,field) ((var).at(#field).get<std::string>())
 //------------------------------------------------------------------------------
-const std::string AnonymBE::eol    = "\r\n",
-                  AnonymBE::posrep = "HTTP/1.1 200 OK" + eol +
+template< typename T >
+const std::string AnonymBE<T>::eol    = "\r\n";
+template< typename T >
+const std::string AnonymBE<T>::posrep = "HTTP/1.1 200 OK" + eol +
                                  "Connection: Keep-Alive" + eol +
                                  "Content-Type: application/json" + eol +
-                                 "Content-Length: ",
-                  AnonymBE::negrep = "HTTP/1.1 400 Bad Request" + eol +
+                                 "Content-Length: ";
+template< typename T >
+const std::string AnonymBE<T>::negrep = "HTTP/1.1 400 Bad Request" + eol +
                                  "Connection: Keep-Alive" + eol +
                                  "Content-Type: application/json" + eol +
-                                 "Content-Length: ",
-                  AnonymBE::magic  = "\xCA\xFE\x41MCS";
+                                 "Content-Length: ";
+template< typename T >
+const std::string AnonymBE<T>::magic  = "\xCA\xFE\x41MCS";
 
 //------------------------------------------------------------------------------
-AnonymBE::AnonymBE() : init_(false), error_(AMCS_NOERROR), die_(false) {
+template< typename T >
+AnonymBE<T>::AnonymBE() : init_(false), error_(AMCS_NOERROR), die_(false) {
     update_mutex_ = SGX_THREAD_MUTEX_INITIALIZER;
     goahead_condition_ = end_condition_ = update_condition_ = SGX_THREAD_COND_INITIALIZER;
 }
 
 //------------------------------------------------------------------------------
-bool AnonymBE::http_parse( const std::string &input, std::string &verb,
+template< typename T >
+bool AnonymBE<T>::http_parse( const std::string &input, std::string &verb,
                            std::string &command, std::string &content ) {
     size_t pos;
     if( input.find("HTTP/") != std::string::npos ) {
@@ -50,22 +60,28 @@ bool AnonymBE::http_parse( const std::string &input, std::string &verb,
 //------------------------------------------------------------------------------
 using json = nlohmann::json;
 //------------------------------------------------------------------------------
-AnonymBE::AMCSError AnonymBE::process_get( const std::string &command, 
+template< typename T >
+typename AnonymBE<T>::AMCSError AnonymBE<T>::process_get( const std::string &command, 
                                            const std::string &content ) {
     if       ( command == "/access/rights" ) {
     } else if( command == "/verifier/certify" ) {
     } else if( command == "/verifier/envelope" ) {
+        auto j = json::parse(content);
+//        database_.(j.at("group_name").get<std::string>(),
+//                              j.at("new_member_id").get<std::string>());
+        return AMCS_NOERROR;
     }
     return AMCS_BAD_REQUEST;
 }
 
 //------------------------------------------------------------------------------
-AnonymBE::AMCSError AnonymBE::process_put( const std::string &command, 
+template< typename T >
+typename AnonymBE<T>::AMCSError AnonymBE<T>::process_put( const std::string &command, 
                                            const std::string &content ) {
     if       ( command == "/access/usergroup" ) {
         auto j = json::parse(content);
-        database_.add_user2group(j.at("group_name").get<std::string>().c_str(),
-                              j.at("new_member_id").get<std::string>().c_str());
+        database_.add_user_to_group( json_str( j, group_name ),
+                                     json_str( j, new_member_id ) );
         return AMCS_NOERROR;
     } else if( command == "/access/aclmember" ) {
     } else if( command == "/access/bucketowner" ) {
@@ -74,20 +90,23 @@ AnonymBE::AMCSError AnonymBE::process_put( const std::string &command,
 }
 
 //------------------------------------------------------------------------------
-AnonymBE::AMCSError AnonymBE::process_post( const std::string &command, 
+template< typename T >
+typename AnonymBE<T>::AMCSError AnonymBE<T>::process_post( const std::string &command, 
                                             const std::string &content,
                                             KVString &response ) {
     if       ( command == "/access/user" ) {
         auto j = json::parse(content);
-        std::string key = 
-           database_.create_user( j.at("user_id").get<std::string>().c_str() );
-        if( key == "" ) return AMCS_CREATE_EXISTENT;
+        unsigned char rnd[ KEY_SIZE ];
+        sgx_read_rand( rnd, sizeof(rnd) );
+        std::string key = std::string( (const char*)rnd, sizeof(rnd) );
+        database_.create_user( json_str( j, user_id ), key );
+        //if( key == "" ) return AMCS_CREATE_EXISTENT;
         response[ "user_key" ] = Crypto::b64_encode(key);
         return AMCS_NOERROR;
     } else if( command == "/access/group" ) {
         auto j = json::parse(content);
-        database_.create_group( j.at("group_name").get<std::string>().c_str(),
-                                j.at("user_id").get<std::string>().c_str() );
+        database_.create_group( json_str( j,group_name ), 
+                                json_str( j,user_id ) );
         return AMCS_NOERROR;
     } else if( command == "/access/acl" ) {
     } else if( command == "/verifier/acl" ) {
@@ -97,16 +116,22 @@ AnonymBE::AMCSError AnonymBE::process_post( const std::string &command,
 }
 
 //------------------------------------------------------------------------------
-AnonymBE::AMCSError AnonymBE::process_delete( const std::string &command, 
+template< typename T >
+typename AnonymBE<T>::AMCSError AnonymBE<T>::process_delete( const std::string &command, 
                                               const std::string &content ) {
     if       ( command == "/access/usergroup" ) {
+        auto j = json::parse(content);
+        database_.remove_user_from_group( json_str( j, group_name ),
+                                          json_str( j, revoke_member_id ) );
+        return AMCS_NOERROR;
     } else if( command == "/access/aclmember" ) {
     }
     return AMCS_BAD_REQUEST;
 }
 
 //------------------------------------------------------------------------------
-void AnonymBE::process_input( std::string &rep, const char *buff, size_t len ) {
+template< typename T >
+void AnonymBE<T>::process_input( std::string &rep, const char *buff, size_t len ) {
     if( !init_ ) init();
 
     std::string input(buff,len), verb, command, content, extra;
@@ -135,6 +160,8 @@ void AnonymBE::process_input( std::string &rep, const char *buff, size_t len ) {
         } catch( std::invalid_argument &e ) {
             extra = e.what();
             error = AMCS_BAD_REQUEST;
+        } catch( std::logic_error &e ) { //warning, not error
+            response["info"] = e.what();
         }
     } else {
         extra = "Error parsing HTML";
@@ -149,11 +176,8 @@ void AnonymBE::process_input( std::string &rep, const char *buff, size_t len ) {
 }
 
 //------------------------------------------------------------------------------
-void AnonymBE::increment() {
-}
-
-//------------------------------------------------------------------------------
-void AnonymBE::set_positive_response( std::string &rep, const KVString &response ) {
+template< typename T >
+void AnonymBE<T>::set_positive_response( std::string &rep, const KVString &response ) {
     json j;
     j["result"] = "OK";
     for( auto &kv : response ) {
@@ -164,7 +188,8 @@ void AnonymBE::set_positive_response( std::string &rep, const KVString &response
 }
 
 //------------------------------------------------------------------------------
-void AnonymBE::set_negative_response( std::string &rep, const std::string &msg,
+template< typename T >
+void AnonymBE<T>::set_negative_response( std::string &rep, const std::string &msg,
                                                     const std::string &extra ) {
     json j;
     j["result"] = "error";
@@ -176,26 +201,31 @@ void AnonymBE::set_negative_response( std::string &rep, const std::string &msg,
 }
 
 //------------------------------------------------------------------------------
-int AnonymBE::input_file( const std::string &data ) {
+template< typename T >
+int AnonymBE<T>::input_file( const std::string &data ) {
 }
 
 //------------------------------------------------------------------------------
-int AnonymBE::init() {
+template< typename T >
+int AnonymBE<T>::init() {
 }
 
 //------------------------------------------------------------------------------
-void AnonymBE::finish() {
+template< typename T >
+void AnonymBE<T>::finish() {
 }
 
 //------------------------------------------------------------------------------
-bool AnonymBE::printmsg_onerror( int ret, const char *msg ) {
+template< typename T >
+bool AnonymBE<T>::printmsg_onerror( int ret, const char *msg ) {
     if( ret != SGX_SUCCESS ) 
-        printf("%s: %s\n", msg, err_msg(ret).c_str() );
+        printf("%s: %s\n", msg, err_msg(ret) );
     return ret == SGX_SUCCESS;
 } 
 
 //------------------------------------------------------------------------------
-std::string AnonymBE::err_msg( int v ) {
+template< typename T >
+std::string AnonymBE<T>::err_msg( int v ) {
     switch(v) {
     case SGX_ERROR_AE_SESSION_INVALID:
         return "Session is not created or has been closed "
@@ -208,7 +238,8 @@ std::string AnonymBE::err_msg( int v ) {
 }
 
 //------------------------------------------------------------------------------
-std::string AnonymBE::err_amcs( AMCSError e ) {
+template< typename T >
+std::string AnonymBE<T>::err_amcs( AMCSError e ) {
     switch(e) {
     case AMCS_NOERROR:             return "No error";
     case AMCS_INITIALIZATION_FAIL: return "Fail to initialize AnonymBE";

@@ -4,8 +4,10 @@
 #include <string>
 #include <sgx_tae_service.h>
 #include <sgx_thread.h>
-#include <database.h>
+#include <map>
+typedef std::map<std::string,std::string> KVString;
 
+template< typename Database >
 class AnonymBE {
 public:
     AnonymBE();
@@ -43,7 +45,6 @@ private:
 
     std::string err_msg( int );
     std::string err_amcs( AMCSError e );
-    void increment();
     bool http_parse( const std::string &input, std::string &verb,
                            std::string &command, std::string &content );
     bool printmsg_onerror( int ret, const char *msg );
@@ -62,6 +63,8 @@ private:
 };
 
 extern "C" { int printf(const char *fmt, ...); }
+
+#include <anonymbe_service.hpp>
 
 #endif
 

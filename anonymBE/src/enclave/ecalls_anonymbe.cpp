@@ -3,6 +3,12 @@
 #include <sgx_cryptoall.h>
 #include <stdio.h>
 
+#ifdef MEMDATABASE
+#include <memory_database.h>
+#else
+#include <MongoDatabase.h>
+#endif
+
 //------------------------------------------------------------------------------
 int printf(const char *fmt, ...) {
     char buf[BUFSIZ] = {'\0'};
@@ -15,7 +21,11 @@ int printf(const char *fmt, ...) {
 }
 //------------------------------------------------------------------------------
 
-AnonymBE anonymbe;
+#ifdef MEMDATABASE
+AnonymBE<MDatabase> anonymbe;
+#else
+AnonymBE<MongoDatabase> anonymbe;
+#endif
 
 //------------------------------------------------------------------------------
 int ecall_query( int fd, const char *buff, size_t len ) {

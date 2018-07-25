@@ -21,7 +21,7 @@ EnclaveSources:=$(SrcDir)/enclave
 
 App_Libs        := pthread sgx_uae_service sgx_urts
 Enclave_Libs    := sgx_tstdc sgx_tservice sgx_uae_service
-SharedEnclFlags := -DENCLAVED -DSGX_OPENSSL
+SharedEnclFlags := -DENCLAVED -DSGX_OPENSSL -DMEMDATABASE
 
 include Makefile.sgx
 include Makefile.in
@@ -43,9 +43,9 @@ NatvObjs         := $(addprefix $(ObjDir)/, $(EnclaveName)_u.o event_loop.o \
                          sgx_initenclave_u.o sgx_errlist_u.o \
                          Ocall_implements.o )
 EnclAllObjs      := $(addprefix $(ObjDir)/, $(EnclaveName)_t.o \
-                         ecalls_$(SysName)_t.o anonymbe_service_t.o \
+                         ecalls_$(SysName)_t.o \
                          sgx_cryptoall_t.o libc_proxy_t.o file_mock_t.o \
-                         database_t.o Ocall_wrappers_t.o ) \
+                         memory_database_t.o Ocall_wrappers_t.o ) \
                     $(addprefix $(OpenSSLSGXDir), libssl.a libcrypto.a ) \
 
 ############## UNTRUSTED #######################################################
