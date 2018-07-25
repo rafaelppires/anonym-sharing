@@ -6,7 +6,7 @@
 #include <set>
 typedef std::map<std::string,std::string> KVString;
 
-class MDatabase : public Database {
+class MemDatabase : public Database {
 public:
     void add_user_to_group( const std::string &gname, const std::string &new_uid );
     void create_user( const std::string &uid, const std::string &key );

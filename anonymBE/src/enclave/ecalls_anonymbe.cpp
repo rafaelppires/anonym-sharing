@@ -22,7 +22,7 @@ int printf(const char *fmt, ...) {
 //------------------------------------------------------------------------------
 
 #ifdef MEMDATABASE
-AnonymBE<MDatabase> anonymbe;
+AnonymBE<MemDatabase> anonymbe;
 #else
 AnonymBE<MongoDatabase> anonymbe;
 #endif

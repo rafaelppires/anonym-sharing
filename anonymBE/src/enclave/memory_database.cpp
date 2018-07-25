@@ -1,7 +1,7 @@
 #include <memory_database.h>
 
 //------------------------------------------------------------------------------
-void MDatabase::add_user_to_group( const std::string &gname, 
+void MemDatabase::add_user_to_group( const std::string &gname, 
                                   const std::string &new_uid ) {
     if( groups_.find(gname) == groups_.end() ) {
         throw std::invalid_argument("attempt to add user '" + new_uid + "' to"
@@ -20,7 +20,7 @@ void MDatabase::add_user_to_group( const std::string &gname,
 }
 
 //------------------------------------------------------------------------------
-void MDatabase::create_user( const std::string &uid, const std::string &key ) {
+void MemDatabase::create_user( const std::string &uid, const std::string &key ) {
     if( users_.find( uid ) == users_.end() ) {
         users_[uid] = key;
     }
@@ -29,7 +29,7 @@ void MDatabase::create_user( const std::string &uid, const std::string &key ) {
 }
 
 //------------------------------------------------------------------------------
-void MDatabase::create_group( const std::string &gname, const std::string &uid ){
+void MemDatabase::create_group( const std::string &gname, const std::string &uid ){
     if( groups_.find(gname) == groups_.end() ) {
         if( users_.find(uid) == users_.end() ) {
             throw std::invalid_argument("tried to create group '" + gname + 
@@ -43,7 +43,7 @@ void MDatabase::create_group( const std::string &gname, const std::string &uid )
 }
 
 //------------------------------------------------------------------------------
-void MDatabase::remove_user_from_group( const std::string &gname, 
+void MemDatabase::remove_user_from_group( const std::string &gname, 
                                         const std::string &uid ) {
     if( groups_.find(gname) != groups_.end() ) {
         if( users_.find(uid) == users_.end() ) {

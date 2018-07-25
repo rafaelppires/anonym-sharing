@@ -21,7 +21,10 @@ EnclaveSources:=$(SrcDir)/enclave
 
 App_Libs        := pthread sgx_uae_service sgx_urts
 Enclave_Libs    := sgx_tstdc sgx_tservice sgx_uae_service
-SharedEnclFlags := -DENCLAVED -DSGX_OPENSSL -DMEMDATABASE
+SharedEnclFlags := -DENCLAVED -DSGX_OPENSSL
+ifeq ($(MEMDATABASE), 1)
+    SharedEnclFlags += -DMEMDATABASE
+endif
 
 include Makefile.sgx
 include Makefile.in
@@ -47,6 +50,10 @@ EnclAllObjs      := $(addprefix $(ObjDir)/, $(EnclaveName)_t.o \
                          sgx_cryptoall_t.o libc_proxy_t.o file_mock_t.o \
                          memory_database_t.o Ocall_wrappers_t.o ) \
                     $(addprefix $(OpenSSLSGXDir), libssl.a libcrypto.a ) \
+
+ifneq ($(MEMDATABASE), 1)
+    include Makefile.mongo
+endif
 
 ############## UNTRUSTED #######################################################
 all: $(EXECUTABLES) $(BinDir)/$(EnclaveName).signed.so
