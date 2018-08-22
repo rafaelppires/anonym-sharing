@@ -1,0 +1,26 @@
+MONGODIR = src/mongo-sgx-client
+MONGO_TRUSTDIR  = $(MONGODIR)/trusted
+MONGO_UNTRUSTDIR  = $(MONGODIR)/untrusted
+
+EnclaveCXXIDirs += $(MONGO_TRUSTDIR) $(MONGO_TRUSTDIR)/include/libmongoc-1.0 \
+                   $(MONGO_TRUSTDIR)/include/libbson-1.0 \
+                   $(SGX_COMMONDIR)/enclave_include
+
+NatvObjs    += $(addprefix $(ObjDir)/, my_wrappers_impl_u.o)
+
+EnclAllObjs += $(addprefix $(ObjDir)/, MongoDatabase_t.o pthread_t.o \
+                                       my_wrappers_t.o ssl_wrappers_t.o \
+                                       inet_pton_ntop_t.o )
+EnclExtLibs := $(addprefix $(MONGO_TRUSTDIR)/lib/, libmongoc-static-1.0.a  \
+                                                   libbson-static-1.0.a ) \
+               $(EnclExtLibs)
+
+$(ObjDir)/%_t.o : $(MONGO_TRUSTDIR)/%.cpp | $(ObjDir)
+	@$(call run_and_test,$(CXX) -c $< -o $@ $(Encl_CXXFlags) $(EnclCXXInclude),"CXX SGX")
+
+$(ObjDir)/%_t.o : $(MONGO_TRUSTDIR)/%.c | $(ObjDir)
+	@$(call run_and_test,$(CC) -c $< -o $@ $(Encl_CFlags) $(EnclCInclude),"CC SGX")
+
+$(ObjDir)/%_u.o : $(MONGO_UNTRUSTDIR)/%.cpp | $(ObjDir)
+	@$(call run_and_test,$(CXX) $(NatvInclude) $(CXXFlags) -c -o $@ $<,"CXX")
+

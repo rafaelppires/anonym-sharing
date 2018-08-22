@@ -9,6 +9,7 @@
 #include <MongoDatabase.h>
 #endif
 
+/*
 //------------------------------------------------------------------------------
 int printf(const char *fmt, ...) {
     char buf[BUFSIZ] = {'\0'};
@@ -18,7 +19,7 @@ int printf(const char *fmt, ...) {
     va_end(ap);
     ocall_print(buf);
     return ret;
-}
+}*/
 //------------------------------------------------------------------------------
 
 #ifdef MEMDATABASE

@@ -24,6 +24,8 @@ Enclave_Libs    := sgx_tstdc sgx_tservice sgx_uae_service
 SharedEnclFlags := -DENCLAVED -DSGX_OPENSSL
 ifeq ($(MEMDATABASE), 1)
     SharedEnclFlags += -DMEMDATABASE
+else
+    SharedEnclFlags += -DABEMONGO
 endif
 
 include Makefile.sgx
@@ -33,14 +35,10 @@ EDLSearchPaths+=$(OSLLEnclaveW)
 EnclaveCXXIDirs  := $(SGX_SDK)/include/libcxx #$(SGX_SDK)/include/libcxx
 Enclave_IncDirs  := $(SrcDir) $(EnclaveSources) $(SGX_SDK)/include \
                     $(SGX_SDK)/include/tlibc $(SGX_COMMONDIR) \
-                    $(OpenSSLDir)/OpenSSL_SGX/include
-EnclCInclude     := $(addprefix -I, $(Enclave_IncDirs))
-EnclCXXInclude   := $(EnclCInclude) $(addprefix -I, $(EnclaveCXXIDirs))
-
+                    $(OpenSSLDir)/OpenSSL_SGX/include \
+                    $(SGX_COMMONDIR)/enclave_include
 NatvIncludeDirs  := $(SrcDir) $(EnclaveSources) $(SGX_COMMONDIR) \
                     $(SGX_SDK)/include
-NatvInclude      := $(addprefix -I, $(NatvIncludeDirs))
-
 NatvObjs         := $(addprefix $(ObjDir)/, $(EnclaveName)_u.o event_loop.o \
                          sgx_utils_rp_u.o $(SysName)_ocalls.o \
                          sgx_initenclave_u.o sgx_errlist_u.o \
@@ -48,12 +46,18 @@ NatvObjs         := $(addprefix $(ObjDir)/, $(EnclaveName)_u.o event_loop.o \
 EnclAllObjs      := $(addprefix $(ObjDir)/, $(EnclaveName)_t.o \
                          ecalls_$(SysName)_t.o \
                          sgx_cryptoall_t.o libc_proxy_t.o file_mock_t.o \
-                         memory_database_t.o Ocall_wrappers_t.o ) \
-                    $(addprefix $(OpenSSLSGXDir), libssl.a libcrypto.a ) \
+                         memory_database_t.o Ocall_wrappers_t.o )
+EnclExtLibs      := $(addprefix $(OpenSSLSGXDir), libssl.a libcrypto.a )
 
 ifneq ($(MEMDATABASE), 1)
     include Makefile.mongo
+    EnclAllObjs := $(filter-out $(ObjDir)/Ocall_wrappers_t.o, $(EnclAllObjs))
+    EnclaveLFlags := $(EnclExtLibs) $(EnclaveLFlags)
 endif
+
+EnclCInclude     := $(addprefix -I, $(Enclave_IncDirs))
+EnclCXXInclude   := $(EnclCInclude) $(addprefix -I, $(EnclaveCXXIDirs))
+NatvInclude      := $(addprefix -I, $(NatvIncludeDirs))
 
 ############## UNTRUSTED #######################################################
 all: $(EXECUTABLES) $(BinDir)/$(EnclaveName).signed.so
@@ -67,7 +71,7 @@ $(ObjDir)/%.o : $(SrcDir)/%.cpp | $(ObjDir)
 	@$(call run_and_test,$(CXX) $(NatvInclude) $(CXXFlags) -c -o $@ $<,"CXX")
 
 $(ObjDir)/%_u.o : $(SGX_COMMONDIR)/%.cpp | $(ObjDir)
-	-@$(call run_and_test,$(CXX) $(NatvInclude) $(CXXFlags) -c -o $@ $<,"CXX")
+	@$(call run_and_test,$(CXX) $(NatvInclude) $(CXXFlags) -c -o $@ $<,"CXX")
 
 $(EnclaveSources)/$(EnclaveName)_u.c : $(EnclaveSources)/$(EnclaveName).edl $(SGX_EDGER8R)
 	@$(call run_and_test,cd $(dir $@) && $(SGX_EDGER8R) --untrusted ./$(notdir $<) $(addprefix --search-path ,. $(EDLSearchPaths)),"Edger SGX")
@@ -118,9 +122,9 @@ $(OpenSSLSGXDir)/include :
 	@cd $(OpenSSLSGXDir) && ./sgx_openssl_setup.sh
 
 $(EnclaveSources)/Ocall_wrappers.cpp :
-	@bash -c "cp $(OSLLEnclaveW)/Ocall_wrappers.{cpp,h} $(OSLLEnclaveW)/ssl_enclave_types.h $(EnclaveSources)" 
+	@bash -c "cp $(OSLLEnclaveW)/Ocall_wrappers.{cpp,h} $(EnclaveSources)" 
 	@sed -i 's/"Enclave_t.h"/<enclave_anonymbe_t.h>/' $(EnclaveSources)/Ocall_wrappers.h
-	@sed -i 's/#define _SSL_ENCLAVE_TYPES_/#define _SSL_ENCLAVE_TYPES_\n\n#include <stdint.h>\n/' $(EnclaveSources)/ssl_enclave_types.h
+	@sed -i 's/"ssl_enclave_types.h"/<sys\/socket.h>\n#include <sys\/time.h>/' $(EnclaveSources)/Ocall_wrappers.h
 
 $(SrcDir)/Ocall_implements.cpp :
 	@bash -c "cp $(OSLLAppW)/Ocall_implements.{cpp,h} $(SrcDir)" 
@@ -130,5 +134,5 @@ $(SrcDir)/Ocall_implements.cpp :
 .PHONY: clean all
 
 clean:
-	@bash -c "rm -rf $(EnclaveSources)/*_{t,u}.{c,h} $(BinDir) $(ObjDir) $(EnclaveSources)/Ocall_wrappers.{cpp,h} $(EnclaveSources)/ssl_enclave_types.h $(SrcDir)/Ocall_implements.{cpp,h}"
+	@bash -c "rm -rf $(EnclaveSources)/*_{t,u}.{c,h} $(BinDir) $(ObjDir) $(EnclaveSources)/Ocall_wrappers.{cpp,h} $(SrcDir)/Ocall_implements.{cpp,h}"
 

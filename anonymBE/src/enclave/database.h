@@ -7,7 +7,7 @@ class Database {
 public:
     void add_user_to_group( const std::string &gname, 
                             const std::string &uname );
-    std::string create_user( const std::string &uname, 
+    void create_user( const std::string &uname, 
                              const std::string &key );
     void create_group( const std::string &gname, 
                        const std::string &uid );
