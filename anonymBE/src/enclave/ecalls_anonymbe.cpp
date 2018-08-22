@@ -5,26 +5,9 @@
 
 #ifdef MEMDATABASE
 #include <memory_database.h>
-#else
-#include <MongoDatabase.h>
-#endif
-
-/*
-//------------------------------------------------------------------------------
-int printf(const char *fmt, ...) {
-    char buf[BUFSIZ] = {'\0'};
-    va_list ap;
-    va_start(ap, fmt);
-    int ret = vsnprintf(buf, BUFSIZ, fmt, ap);
-    va_end(ap);
-    ocall_print(buf);
-    return ret;
-}*/
-//------------------------------------------------------------------------------
-
-#ifdef MEMDATABASE
 AnonymBE<MemDatabase> anonymbe;
 #else
+#include <MongoDatabase.h>
 AnonymBE<MongoDatabase> anonymbe;
 #endif
 
@@ -32,7 +15,8 @@ AnonymBE<MongoDatabase> anonymbe;
 int ecall_query( int fd, const char *buff, size_t len ) {
     std::string response;
     anonymbe.process_input( response, buff, len );
-    ocall_response( fd, response.c_str(), response.size() );
+    ssize_t ret;
+    ocall_send( &ret, fd, response.c_str(), response.size(), 0 );
     return 0;
 }
 

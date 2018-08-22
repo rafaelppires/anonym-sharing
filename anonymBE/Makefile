@@ -3,6 +3,7 @@ CXX      :=g++
 CFlags   := -std=c11
 CXXFlags := -std=c++11
 
+
 SGX_COMMONDIR  := $(realpath ../sgx_common)
 SysName = anonymbe
 EnclaveName := enclave_$(SysName)
@@ -10,6 +11,10 @@ EnclaveName := enclave_$(SysName)
 BinDir=bin
 SrcDir=src
 ObjDir=obj
+
+MONGODIR = src/mongo-sgx-client
+MONGO_TRUSTDIR  = $(MONGODIR)/trusted
+MONGO_UNTRUSTDIR  = $(MONGODIR)/untrusted
 
 OpenSSLDir= $(realpath ../SGX-OpenSSL/)
 OpenSSLSGXDir=$(OpenSSLDir)/OpenSSL_SGX/
@@ -42,19 +47,29 @@ NatvIncludeDirs  := $(SrcDir) $(EnclaveSources) $(SGX_COMMONDIR) \
 NatvObjs         := $(addprefix $(ObjDir)/, $(EnclaveName)_u.o event_loop.o \
                          sgx_utils_rp_u.o $(SysName)_ocalls.o \
                          sgx_initenclave_u.o sgx_errlist_u.o \
-                         Ocall_implements.o )
+                         my_wrappers_impl_u.o )
 EnclAllObjs      := $(addprefix $(ObjDir)/, $(EnclaveName)_t.o \
                          ecalls_$(SysName)_t.o \
                          sgx_cryptoall_t.o libc_proxy_t.o file_mock_t.o \
-                         memory_database_t.o Ocall_wrappers_t.o )
+                         ssl_wrappers_t.o my_wrappers_t.o )
 EnclExtLibs      := $(addprefix $(OpenSSLSGXDir), libssl.a libcrypto.a )
 
-ifneq ($(MEMDATABASE), 1)
-    include Makefile.mongo
-    EnclAllObjs := $(filter-out $(ObjDir)/Ocall_wrappers_t.o, $(EnclAllObjs))
-    EnclaveLFlags := $(EnclExtLibs) $(EnclaveLFlags)
+ifeq ($(MEMDATABASE), 1)
+    EnclAllObjs += $(addprefix $(ObjDir)/, memory_database_t.o)
+else
+    EnclaveCXXIDirs += $(MONGO_TRUSTDIR) \
+                       $(MONGO_TRUSTDIR)/include/libmongoc-1.0 \
+                       $(MONGO_TRUSTDIR)/include/libbson-1.0 \
+                       $(SGX_COMMONDIR)/enclave_include
+
+    EnclAllObjs += $(addprefix $(ObjDir)/, MongoDatabase_t.o pthread_t.o \
+                                           inet_pton_ntop_t.o )
+    EnclExtLibs := $(addprefix $(MONGO_TRUSTDIR)/lib/, libmongoc-static-1.0.a  \
+                                                       libbson-static-1.0.a ) \
+                   $(EnclExtLibs)
 endif
 
+EnclaveLFlags := $(EnclExtLibs) $(EnclaveLFlags)
 EnclCInclude     := $(addprefix -I, $(Enclave_IncDirs))
 EnclCXXInclude   := $(EnclCInclude) $(addprefix -I, $(EnclaveCXXIDirs))
 NatvInclude      := $(addprefix -I, $(NatvIncludeDirs))
@@ -113,6 +128,16 @@ $(ObjDir)/%_t.o : $(EnclaveSources)/%.cpp | $(ObjDir)
 $(ObjDir)/%_t.o : $(SGX_COMMONDIR)/%.cpp | $(ObjDir)
 	@$(call run_and_test,$(CXX) -c $< -o $@ $(Encl_CXXFlags) $(EnclCXXInclude),"CXX SGX")
 
+################# MONGO stuff ##################################################
+$(ObjDir)/%_t.o : $(MONGO_TRUSTDIR)/%.cpp | $(ObjDir)
+	@$(call run_and_test,$(CXX) -c $< -o $@ $(Encl_CXXFlags) $(EnclCXXInclude),"CXX SGX")
+
+$(ObjDir)/%_t.o : $(MONGO_TRUSTDIR)/%.c | $(ObjDir)
+	@$(call run_and_test,$(CC) -c $< -o $@ $(Encl_CFlags) $(EnclCInclude),"CC SGX")
+
+$(ObjDir)/%_u.o : $(MONGO_UNTRUSTDIR)/%.cpp | $(ObjDir)
+	@$(call run_and_test,$(CXX) $(NatvInclude) $(CXXFlags) -c -o $@ $<,"CXX")
+
 ################# OPENSSL stuff ################################################
 obj/sgx_cryptoall_t.o : $(OpenSSLSGXDir)/libcrypto.a
 $(OpenSSLSGXDir)/libcrypto.a : $(OpenSSLSGXDir)/include
@@ -121,14 +146,6 @@ $(OpenSSLSGXDir)/libcrypto.a : $(OpenSSLSGXDir)/include
 $(OpenSSLSGXDir)/include :
 	@cd $(OpenSSLSGXDir) && ./sgx_openssl_setup.sh
 
-$(EnclaveSources)/Ocall_wrappers.cpp :
-	@bash -c "cp $(OSLLEnclaveW)/Ocall_wrappers.{cpp,h} $(EnclaveSources)" 
-	@sed -i 's/"Enclave_t.h"/<enclave_anonymbe_t.h>/' $(EnclaveSources)/Ocall_wrappers.h
-	@sed -i 's/"ssl_enclave_types.h"/<sys\/socket.h>\n#include <sys\/time.h>/' $(EnclaveSources)/Ocall_wrappers.h
-
-$(SrcDir)/Ocall_implements.cpp :
-	@bash -c "cp $(OSLLAppW)/Ocall_implements.{cpp,h} $(SrcDir)" 
-	@sed -i 's/"Enclave_u.h"/<enclave_anonymbe_u.h>/' $(SrcDir)/Ocall_implements.cpp
 ################################################################################
 
 .PHONY: clean all

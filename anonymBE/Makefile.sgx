@@ -29,7 +29,7 @@ Enclave_SDK_Libs     := -Wl,--whole-archive \
 Enclave_Lib_Dirs     := $(SGX_LIBRARY_PATH)
 Enclave_Link_Flags   := $(addprefix -L, $(Enclave_Lib_Dirs)) \
                         $(addprefix -l, $(Enclave_Libs)) \
-                        $(Enclave_SDK_Libs) $(EnclExtLibs)
+                        $(Enclave_SDK_Libs)
 EnclaveLFlags := -Wl,--no-undefined -nostdlib \
     -nodefaultlibs -nostartfiles $(Enclave_Link_Flags)  \
     -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined \
