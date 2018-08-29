@@ -3,8 +3,8 @@
 #include <sys/time.h>
 
 //------------------------------------------------------------------------------
-void ocall_print( const char* str ) {
-    printf("\033[96m%s\033[0m", str);
+int ocall_print_string( const char* str ) {
+    return printf("\033[96m%s\033[0m", str);
 }
 
 

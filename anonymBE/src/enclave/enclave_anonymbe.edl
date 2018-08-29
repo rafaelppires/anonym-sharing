@@ -5,7 +5,7 @@ enclave {
     from "sgx_tae_service.edl" import *;
 
     untrusted {
-        void ocall_print([in,string] const char *str);
+        int ocall_print_string([in,string] const char *str);
 
         long ocall_sgx_clock(void);     /* For Performance evaluation */
         struct tm *ocall_sgx_localtime([in, size=t_len]const time_t *timep, int t_len);
