@@ -156,3 +156,6 @@ $(OpenSSLSGXDir)/include :
 clean:
 	@bash -c "rm -rf $(EnclaveSources)/*_{t,u}.{c,h} $(BinDir) $(ObjDir) $(EnclaveSources)/Ocall_wrappers.{cpp,h} $(SrcDir)/Ocall_implements.{cpp,h}"
 
+$(EnclaveSources)/ecalls_anonymbe.cpp : $(EnclaveSources)/anonymbe_service.h
+$(EnclaveSources)/anonymbe_service.h : $(EnclaveSources)/anonymbe_service.hpp
+

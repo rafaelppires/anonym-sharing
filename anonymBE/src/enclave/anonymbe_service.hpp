@@ -5,6 +5,7 @@
 #include <libc_mock/libcpp_mock.h>
 #include <json/json.hpp>
 #include <sgx_trts.h>
+#include <database.h>
 
 #define KEY_SIZE 32
 
@@ -61,14 +62,22 @@ bool AnonymBE<T>::http_parse( const std::string &input, std::string &verb,
 using json = nlohmann::json;
 //------------------------------------------------------------------------------
 template< typename T >
-typename AnonymBE<T>::AMCSError AnonymBE<T>::process_get( const std::string &command, 
-                                           const std::string &content ) {
+typename AnonymBE<T>::AMCSError AnonymBE<T>::process_get( 
+                      const std::string &command, const std::string &content,
+                                                  KVString &response ) {
     if       ( command == "/access/rights" ) {
     } else if( command == "/verifier/certify" ) {
     } else if( command == "/verifier/envelope" ) {
         auto j = json::parse(content);
-//        database_.(j.at("group_name").get<std::string>(),
-//                              j.at("new_member_id").get<std::string>());
+        std::string bucket_key = j.at("bucket_key").get<std::string>();
+        KeyArray ka = database_.get_keys_of_group(
+                                          j.at("bucket_id").get<std::string>());
+        std::string ctext;
+        for( const auto &k : ka ) {
+            ctext += std::string( (const char*)k.data(), KEY_SIZE );
+        }
+
+        response[ "ciphertext" ] = Crypto::b64_encode(ctext);
         return AMCS_NOERROR;
     }
     return AMCS_BAD_REQUEST;
@@ -91,9 +100,9 @@ typename AnonymBE<T>::AMCSError AnonymBE<T>::process_put( const std::string &com
 
 //------------------------------------------------------------------------------
 template< typename T >
-typename AnonymBE<T>::AMCSError AnonymBE<T>::process_post( const std::string &command, 
-                                            const std::string &content,
-                                            KVString &response ) {
+typename AnonymBE<T>::AMCSError AnonymBE<T>::process_post( 
+                         const std::string &command, const std::string &content,
+                                                     KVString &response ) {
     if       ( command == "/access/user" ) {
         auto j = json::parse(content);
         unsigned char rnd[ KEY_SIZE ];
@@ -142,7 +151,7 @@ void AnonymBE<T>::process_input( std::string &rep, const char *buff, size_t len 
     if( http_parse( input, verb, command, content ) ) {
         try {
             if       ( verb == "GET" ) {
-                error = process_get( command, content ); 
+                error = process_get( command, content, response ); 
             } else if( verb == "PUT" ) {    
                 error = process_put( command, content );
             } else if( verb == "POST" ) {   

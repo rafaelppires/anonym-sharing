@@ -66,4 +66,27 @@ void MemDatabase::remove_user_from_group( const std::string &gname,
 }
 
 //------------------------------------------------------------------------------
+KeyArray MemDatabase::get_keys_of_group( const std::string &gname ) {
+    KeyArray ret;
+    if( groups_.find( gname ) != groups_.end() ) {
+        if( groups_[gname].empty() ) {
+            throw std::invalid_argument( "group '"+ gname +"' is empty" );
+        }
+
+        KeyArray::value_type key;
+        for( const auto &uid : groups_[gname] ) {
+            if( users_.find(uid) != users_.end() ) {
+                key.fill(0);
+                memcpy( key.data(), users_[uid].c_str(), 
+                               std::min(users_[uid].size(), size_t(KEY_SIZE)) );
+                ret.push_back( key );
+            }
+        }
+    } else {
+        throw std::invalid_argument( "unknown group '"+ gname +"'" );
+    } 
+    return ret;
+}
+
+//------------------------------------------------------------------------------
 

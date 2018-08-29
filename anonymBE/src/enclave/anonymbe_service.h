@@ -35,7 +35,7 @@ private:
     } error_;
 
     AMCSError process_get   ( const std::string &command, 
-                              const std::string &content );
+                              const std::string &content, KVString &rep );
     AMCSError process_put   ( const std::string &command, 
                               const std::string &content );
     AMCSError process_post  ( const std::string &command, 
