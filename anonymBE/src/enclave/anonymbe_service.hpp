@@ -74,7 +74,9 @@ typename AnonymBE<T>::AMCSError AnonymBE<T>::process_get(
                                           j.at("bucket_id").get<std::string>());
         std::string ctext;
         for( const auto &k : ka ) {
-            ctext += std::string( (const char*)k.data(), KEY_SIZE );
+            ctext += Crypto::encrypt_aes( 
+                            std::string( (const char*)k.data(), KEY_SIZE ),
+                            bucket_key );
         }
 
         response[ "ciphertext" ] = Crypto::b64_encode(ctext);
