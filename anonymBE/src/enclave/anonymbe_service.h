@@ -31,7 +31,8 @@ private:
         AMCS_CREATE_EXISTENT,
         AMCS_NON_EXISTENT,
         AMCS_ROLLBACK_ATTACK,
-        AMCS_WRAPUP
+        AMCS_WRAPUP,
+        AMCS_UNKNOWN
     } error_;
 
     AMCSError process_get   ( const std::string &command, 
@@ -43,6 +44,7 @@ private:
     AMCSError process_delete( const std::string &command, 
                               const std::string &content );
 
+    std::string mongo_error( uint32_t );
     std::string err_msg( int );
     std::string err_amcs( AMCSError e );
     bool http_parse( const std::string &input, std::string &verb,

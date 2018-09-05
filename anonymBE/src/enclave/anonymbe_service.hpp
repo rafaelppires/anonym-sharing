@@ -28,7 +28,7 @@ const std::string AnonymBE<T>::magic  = "\xCA\xFE\x41MCS";
 
 //------------------------------------------------------------------------------
 template< typename T >
-AnonymBE<T>::AnonymBE() : init_(false), error_(AMCS_NOERROR), die_(false) {
+AnonymBE<T>::AnonymBE() : /*database_(true),*/ init_(false), error_(AMCS_NOERROR), die_(false) {
     update_mutex_ = SGX_THREAD_MUTEX_INITIALIZER;
     goahead_condition_ = end_condition_ = update_condition_ = SGX_THREAD_COND_INITIALIZER;
 }
@@ -173,17 +173,31 @@ void AnonymBE<T>::process_input( std::string &rep, const char *buff, size_t len 
             error = AMCS_BAD_REQUEST;
         } catch( std::logic_error &e ) { //warning, not error
             response["info"] = e.what();
-        }
+        } catch( uint32_t e ) {
+            extra = mongo_error(e);
+            error = AMCS_UNKNOWN;
+        } //catch( ... ) {
+            //error = AMCS_UNKNOWN;
+        //}
     } else {
         extra = "Error parsing HTML";
         error = AMCS_BAD_REQUEST;
     }
 
-    if( error == AMCS_NOERROR )
+    if( error == AMCS_NOERROR )  {
         set_positive_response(rep, response);
-    else
+    } else {
         set_negative_response(rep, err_amcs(error), extra);
+    }
 
+}
+//------------------------------------------------------------------------------
+template< typename T >
+std::string AnonymBE<T>::mongo_error( uint32_t e ){
+    switch( e ) {
+    case 11000: return "Attempt to add an existing user";
+    default: return "Unknown mongo error";
+    };
 }
 
 //------------------------------------------------------------------------------
@@ -261,6 +275,7 @@ std::string AnonymBE<T>::err_amcs( AMCSError e ) {
     case AMCS_NON_EXISTENT:        return "Tried to get or update a "
                                           "non-existing counter";
     case AMCS_WRAPUP:              return "Service is being terminated";
+    case AMCS_UNKNOWN:
     default:                       return "Unknown error";
     }
 }

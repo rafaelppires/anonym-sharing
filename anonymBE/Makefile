@@ -64,12 +64,13 @@ else
 
     EnclAllObjs += $(addprefix $(ObjDir)/, MongoDatabase_t.o pthread_t.o \
                                            inet_pton_ntop_t.o )
-    EnclExtLibs := $(addprefix $(MONGO_TRUSTDIR)/lib/, libmongoc-static-1.0.a  \
+    EnclExtLibs := $(addprefix $(MONGO_TRUSTDIR)/lib/, libmongoc-static-1.0.a \
                                                        libbson-static-1.0.a \
                                                        libssl.a libcrypto.a )
-#   EnclExtLibs := $(addprefix $(MONGO_TRUSTDIR)/lib/, libmongoc-static-1.0.a  \
-#                                                      libbson-static-1.0.a ) \
-#                  $(EnclExtLibs)
+#   EnclExtLibs := $(addprefix $(MONGO_TRUSTDIR)/lib/, \
+#                                                libmongoc-static-1.0-debug.a  \
+#                                                libbson-static-1.0-debug.a \
+#                                                libssl.a libcrypto.a ) 
 endif
 
 EnclaveLFlags := $(EnclExtLibs) $(EnclaveLFlags)
