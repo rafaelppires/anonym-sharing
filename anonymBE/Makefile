@@ -4,7 +4,6 @@ CFlags   := -std=c11
 CXXFlags := -std=c++11
 
 
-SGX_COMMONDIR  := $(realpath ../sgx_common)
 SysName = anonymbe
 EnclaveName := enclave_$(SysName)
 
@@ -16,7 +15,7 @@ MONGODIR = src/mongo-sgx-client
 MONGO_TRUSTDIR  = $(MONGODIR)/trusted
 MONGO_UNTRUSTDIR  = $(MONGODIR)/untrusted
 
-OpenSSLDir= $(realpath ../SGX-OpenSSL/)
+OpenSSLDir= $(realpath src/SGX-OpenSSL/)
 OpenSSLSGXDir=$(OpenSSLDir)/OpenSSL_SGX/
 OSLLEnclaveW=$(OpenSSLDir)/Wrappers/Enclave
 OSLLAppW=$(OpenSSLDir)/Wrappers/App
