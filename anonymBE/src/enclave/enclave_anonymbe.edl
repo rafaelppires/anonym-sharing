@@ -1,0 +1,51 @@
+enclave {
+    include "time.h"
+    include "../src/mongo-sgx-client/trusted/my_enclave_types.h"
+
+    from "sgx_tae_service.edl" import *;
+
+    untrusted {
+        int ocall_print_string([in,string] const char *str);
+
+        long ocall_sgx_clock(void);     /* For Performance evaluation */
+        struct tm *ocall_sgx_localtime([in, size=t_len]const time_t *timep, int t_len);
+        struct tm *ocall_sgx_gmtime_r([in, size=t_len]const time_t *timep, int t_len, [out, size=tmp_len]struct tm *tmp, int tmp_len);
+        int ocall_sgx_gettimeofday([in, out, size=tv_size]void *tv, int tv_size);
+        int ocall_sgx_write(int fd, [in, size=n]const void *buf, int n) propagate_errno;
+
+        void* ocall_malloc(size_t size);
+        void ocall_free([user_check] void *ptr);
+        int ocall_access([in, string] const char *path, int amode) propagate_errno;
+        int ocall_getaddrinfo([in, string] const char *node, [in, string] const char *service, [in] const struct addrinfo *hints, [out] struct addrinfo **res);
+        void ocall_freeaddrinfo([user_check] struct addrinfo *res);
+        int ocall_fcntl(int fildes, int cmd, int arg) propagate_errno;
+        int ocall_poll([in, out, count=nfds] struct pollfd *fds, nfds_t nfds, int timeout) propagate_errno;
+        int ocall_getsockopt(int socket, int level, int option_name, [user_check] void *option_value, [user_check] socklen_t *option_len) propagate_errno;
+        int ocall_setsockopt(int socket, int level, int option_name, [in, size=option_len] const void *option_value, socklen_t option_len) propagate_errno;
+        int ocall_accept(int socket, [user_check] struct sockaddr *address, [in, out] socklen_t *address_len) propagate_errno;
+        int ocall_close(int fildes) propagate_errno;
+        uint16_t ocall_ntohs(uint16_t netshort);
+        int ocall_bind(int socket, [in, size=address_len] const struct sockaddr *address, socklen_t address_len) propagate_errno;
+        int ocall_shutdown(int socket, int how) propagate_errno;
+        int ocall_connect(int socket, [user_check] const struct sockaddr *address, socklen_t address_len) propagate_errno;
+        int ocall_listen(int socket, int backlog) propagate_errno;
+        int ocall_socket(int domain, int type, int protocol) propagate_errno;
+        ssize_t ocall_recv(int socket, [out, size=length] void *buffer, size_t length, int flags) propagate_errno;
+        ssize_t ocall_send(int socket, [in, size=length] const void *buffer, size_t length, int flags) propagate_errno;
+        ssize_t ocall_sendmsg(int socket, [user_check] const struct msghdr *message, int flags) propagate_errno;
+        struct hostent *ocall_gethostbyname([in, string] const char *name);
+        int ocall_getnameinfo([in, size=addrlen] const struct sockaddr *addr, socklen_t addrlen, [in, out, size=hostlen] char *host, socklen_t hostlen, [in, out, size=servlen] char *serv, socklen_t servlen, int flags);
+        ssize_t ocall_read(int fildes, [out, size=nbyte] void *buf, size_t nbyte) propagate_errno;
+        int ocall_gethostname([out, count=namelen] char *name, size_t namelen);
+        pid_t ocall_getpid(void);
+        int ocall_usleep(useconds_t usec);
+        time_t ocall_time([in, out] time_t *tloc);
+    };
+
+    trusted {
+        public int ecall_init(void);
+        public void ecall_finish(void);
+        public int ecall_query(int fd,[in,size=len] const char *buff, size_t len);
+    };
+};
+

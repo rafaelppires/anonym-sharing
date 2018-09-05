@@ -1,0 +1,41 @@
+SGX_SDK              := /opt/intel/sgxsdk
+SGX_LIBRARY_PATH     := $(SGX_SDK)/lib64
+SGX_ENCLAVE_SIGNER   := $(SGX_SDK)/bin/x64/sgx_sign
+SGX_EDGER8R          := $(SGX_SDK)/bin/x64/sgx_edger8r
+SGX_COMMONDIR  := $(realpath ../sgx_common)
+
+App_Link_Flags  := $(addprefix -L, $(App_Lib_Dirs)) \
+                   $(addprefix -l, $(App_Libs))
+
+
+SharedCompFlags := -m64
+Natv_CFlags     := $(SharedCompFlags) $(CFlags)
+SharedEnclFlags += $(SharedCompFlags) -nostdinc -fvisibility=hidden \
+                   -fpie -fstack-protector -fno-builtin-printf
+Encl_CFlags     := $(SharedEnclFlags) $(CFlags) \
+                   -Wno-implicit-function-declaration
+Encl_CXXFlags   := $(SharedEnclFlags) $(CXXFlags) -nostdinc++
+
+Trts_Library_Name    := sgx_trts
+Service_Library_Name := sgx_tservice
+Enclave_SDK_Libs     := -Wl,--whole-archive \
+                        -l$(Trts_Library_Name) \
+                        -Wl,--no-whole-archive \
+                        -Wl,--start-group \
+                             $(addprefix -l, sgx_tstdc sgx_tcxx sgx_tcrypto \
+                                             $(Service_Library_Name) ) \
+                        -Wl,--end-group \
+                        -lsgx_tstdcxx -lsgx_tstdc
+Enclave_Lib_Dirs     := $(SGX_LIBRARY_PATH)
+Enclave_Link_Flags   := $(addprefix -L, $(Enclave_Lib_Dirs)) \
+                        $(addprefix -l, $(Enclave_Libs)) \
+                        $(Enclave_SDK_Libs)
+EnclaveLFlags := -Wl,--no-undefined -nostdlib \
+    -nodefaultlibs -nostartfiles $(Enclave_Link_Flags)  \
+    -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined \
+    -Wl,-pie,-eenclave_entry -Wl,--export-dynamic  \
+    -Wl,--defsym,__ImageBase=0 \
+    -Wl,--version-script=$(EnclaveSources)/$(EnclaveName).lds
+
+EDLSearchPaths += $(SGX_SDK)/include
+
