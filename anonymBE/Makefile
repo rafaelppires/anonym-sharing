@@ -2,6 +2,7 @@ CC       :=gcc
 CXX      :=g++
 CFlags   := -std=c11
 CXXFlags := -std=c++11
+SharedCompFlags := -m64
 
 
 SysName = anonymbe
@@ -25,6 +26,7 @@ EnclaveSources:=$(SrcDir)/enclave
 
 App_Libs        := pthread sgx_uae_service sgx_urts
 Enclave_Libs    := sgx_tstdc sgx_tservice sgx_uae_service
+SharedCompFlags += -DTLS_REQUESTS
 SharedEnclFlags := -DENCLAVED -DSGX_OPENSSL
 ifeq ($(MEMDATABASE), 1)
     SharedEnclFlags += -DMEMDATABASE
@@ -50,11 +52,12 @@ NatvObjs         := $(addprefix $(ObjDir)/, $(EnclaveName)_u.o event_loop.o \
 EnclAllObjs      := $(addprefix $(ObjDir)/, $(EnclaveName)_t.o \
                          ecalls_$(SysName)_t.o \
                          sgx_cryptoall_t.o libc_proxy_t.o file_mock_t.o \
-                         ssl_wrappers_t.o my_wrappers_t.o )
+                         ssl_wrappers_t.o my_wrappers_t.o tls_config_t.o )
 EnclExtLibs      := $(addprefix $(OpenSSLSGXDir), libssl.a libcrypto.a )
 
 ifeq ($(MEMDATABASE), 1)
     EnclAllObjs += $(addprefix $(ObjDir)/, memory_database_t.o)
+#    EnclExtLibs := $(addprefix $(MONGO_TRUSTDIR)/lib/, libssl.a libcrypto.a)
 else
     EnclaveCXXIDirs += $(MONGO_TRUSTDIR) \
                        $(MONGO_TRUSTDIR)/include/libmongoc-1.0 \
@@ -77,19 +80,26 @@ EnclCInclude     := $(addprefix -I, $(Enclave_IncDirs))
 EnclCXXInclude   := $(EnclCInclude) $(addprefix -I, $(EnclaveCXXIDirs))
 NatvInclude      := $(addprefix -I, $(NatvIncludeDirs))
 
+ifeq ($(DEBUG), 1)
+    Encl_CFlags   += -g
+    Encl_CXXFlags += -g
+    Natv_CXXFlags += -g
+    Natv_CFlags   += -g
+endif
+
 ############## UNTRUSTED #######################################################
 all: $(EXECUTABLES) $(BinDir)/$(EnclaveName).signed.so
 
 $(ObjDir)/$(SysName).o : $(ObjDir)/$(EnclaveName)_u.o
 
 $(BinDir)/$(SysName) : $(ObjDir)/$(SysName).o $(NatvObjs) | $(BinDir)
-	@$(call run_and_test,$(CXX) $(CXXFlags) -o $@ $^ $(App_Link_Flags),"Link")
+	@$(call run_and_test,$(CXX) $(Natv_CXXFlags) -o $@ $^ $(App_Link_Flags),"Link")
 
 $(ObjDir)/%.o : $(SrcDir)/%.cpp | $(ObjDir)
-	@$(call run_and_test,$(CXX) $(NatvInclude) $(CXXFlags) -c -o $@ $<,"CXX")
+	@$(call run_and_test,$(CXX) $(Natv_CXXFlags) $(NatvInclude) -c -o $@ $<,"CXX")
 
 $(ObjDir)/%_u.o : $(SGX_COMMONDIR)/%.cpp | $(ObjDir)
-	@$(call run_and_test,$(CXX) $(NatvInclude) $(CXXFlags) -c -o $@ $<,"CXX")
+	@$(call run_and_test,$(CXX) $(Natv_CXXFlags) $(NatvInclude) -c -o $@ $<,"CXX")
 
 $(EnclaveSources)/$(EnclaveName)_u.c : $(EnclaveSources)/$(EnclaveName).edl $(SGX_EDGER8R)
 	@$(call run_and_test,cd $(dir $@) && $(SGX_EDGER8R) --untrusted ./$(notdir $<) $(addprefix --search-path ,. $(EDLSearchPaths)),"Edger SGX")
@@ -139,7 +149,7 @@ $(ObjDir)/%_t.o : $(MONGO_TRUSTDIR)/%.c | $(ObjDir)
 	@$(call run_and_test,$(CC) -c $< -o $@ $(Encl_CFlags) $(EnclCInclude),"CC SGX")
 
 $(ObjDir)/%_u.o : $(MONGO_UNTRUSTDIR)/%.cpp | $(ObjDir)
-	@$(call run_and_test,$(CXX) $(NatvInclude) $(CXXFlags) -c -o $@ $<,"CXX")
+	@$(call run_and_test,$(CXX) $(Natv_CXXFlags) $(NatvInclude) -c -o $@ $<,"CXX")
 
 ################# OPENSSL stuff ################################################
 obj/sgx_cryptoall_t.o : $(OpenSSLSGXDir)/libcrypto.a

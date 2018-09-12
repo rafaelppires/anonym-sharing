@@ -7,9 +7,8 @@ SGX_COMMONDIR  := $(realpath src/mongo-sgx-client/sgx_common)
 App_Link_Flags  := $(addprefix -L, $(App_Lib_Dirs)) \
                    $(addprefix -l, $(App_Libs))
 
-
-SharedCompFlags := -m64
 Natv_CFlags     := $(SharedCompFlags) $(CFlags)
+Natv_CXXFlags   := $(SharedCompFlags) $(CXXFlags)
 SharedEnclFlags += $(SharedCompFlags) -nostdinc -fvisibility=hidden \
                    -fpie -fstack-protector -fno-builtin-printf
 Encl_CFlags     := $(SharedEnclFlags) $(CFlags) \

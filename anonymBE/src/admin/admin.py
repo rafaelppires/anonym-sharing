@@ -3,6 +3,10 @@
 import json
 import socket
 import requests
+#import os, ssl
+#if (not os.environ.get('PYTHONHTTPSVERIFY', '') and
+#    getattr(ssl, '_create_unverified_context', None)): 
+#    ssl._create_default_https_context = ssl._create_unverified_context
 
 def create_group( owner_id, group_name ):
     return json.dumps( { 'user_id' : owner_id,
@@ -34,38 +38,38 @@ def sync_reqrep( message ):
     s.close()
     return data
 
-URL='http://127.0.0.1:4444'
+URL='https://127.0.0.1:4444'
 r = requests.post( URL + '/access/user',
-                   data=create_user('user01') )
+                   data=create_user('user01'), verify=False )
 print(r.text)
 r = requests.post( URL + '/access/user',
-                   data=create_user('user02') )
+                   data=create_user('user02'), verify=False )
 print(r.text)
 r = requests.post( URL + '/access/user',
-                   data=create_user('user03') )
+                   data=create_user('user03'), verify=False )
 print(r.text)
 r = requests.post( URL + '/access/group',
-                   data=create_group('user02', 'group02') )
+                   data=create_group('user02', 'group02'), verify=False )
 print(r.text)
 r = requests.put( URL + '/access/usergroup',
-                  data=add_user2group( 'group02', 'user01' ) )
+                  data=add_user2group( 'group02', 'user01' ), verify=False )
 print(r.text)
 r = requests.put( URL + '/access/usergroup',
-                  data=add_user2group( 'group02', 'user03' ) )
+                  data=add_user2group( 'group02', 'user03' ), verify=False )
 print(r.text)
 r = requests.delete( URL + '/access/usergroup',
-                  data=delete_userFgroup( 'group01', 'user01' ) )
+                  data=delete_userFgroup( 'group01', 'user01' ), verify=False )
 print(r.text)
 r = requests.delete( URL + '/access/usergroup',
-                  data=delete_userFgroup( 'group02', 'user01' ) )
+                  data=delete_userFgroup( 'group02', 'user01' ), verify=False )
 print(r.text)
 r = requests.delete( URL + '/access/usergroup',
-                  data=delete_userFgroup( 'group02', 'user01' ) )
+                  data=delete_userFgroup( 'group02', 'user01' ), verify=False )
 print(r.text)
 r = requests.get( URL + '/verifier/envelope',
-                  data=get_envelope( 'user01', 'group02', 'abacaxi' ) )
+                  data=get_envelope( 'user01', 'group02', 'abacaxi' ), verify=False )
 print(r.text)
 r = requests.get( URL + '/verifier/envelope',
-                  data=get_envelope( 'user03', 'group02', 'jabuticaba' ) )
+                  data=get_envelope( 'user03', 'group02', 'jabuticaba' ), verify=False )
 print(r.text)
 

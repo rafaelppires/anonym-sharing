@@ -3,16 +3,16 @@
 #include <sys/time.h>
 
 //------------------------------------------------------------------------------
-int ocall_print_string( const char* str ) {
+int ocall_print_string(const char *str) {
     return printf("\033[96m%s\033[0m", str);
 }
 
-
 //------------------------------------------------------------------------------
 long ocall_sgx_clock(void) {
-    struct timespec tstart={0,0}, tend={0,0};
+    struct timespec tstart = {0, 0}, tend = {0, 0};
     clock_gettime(CLOCK_MONOTONIC, &tstart);
-    return tstart.tv_sec * 1000000 + tstart.tv_nsec/1000; // Return micro seconds
+    return tstart.tv_sec * 1000000 +
+           tstart.tv_nsec / 1000;  // Return micro seconds
 }
 
 //------------------------------------------------------------------------------
@@ -21,7 +21,8 @@ struct tm *ocall_sgx_localtime(const time_t *timep, int t_len) {
 }
 
 //------------------------------------------------------------------------------
-struct tm *ocall_sgx_gmtime_r(const time_t *timep, int t_len, struct tm *tmp, int tmp_len) {
+struct tm *ocall_sgx_gmtime_r(const time_t *timep, int t_len, struct tm *tmp,
+                              int tmp_len) {
     return gmtime_r(timep, tmp);
 }
 
@@ -36,4 +37,3 @@ int ocall_sgx_write(int fd, const void *buf, int n) {
 }
 
 //------------------------------------------------------------------------------
-
