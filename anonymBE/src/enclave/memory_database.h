@@ -3,6 +3,7 @@
 
 #include <database.h>
 #include <map>
+#include <mutex>
 #include <set>
 typedef std::map<std::string, std::string> KVString;
 
@@ -19,6 +20,7 @@ class MemDatabase : public Database {
    private:
     std::map<std::string, std::set<std::string> > groups_;
     KVString users_;  // pairs of username,password
+    std::mutex gmutex_, umutex_;
 };
 
 #endif

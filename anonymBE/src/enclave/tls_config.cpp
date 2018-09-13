@@ -2,6 +2,7 @@
 #include <openssl/err.h>
 #include <openssl/x509.h>
 #include <map>
+#include <mutex>
 #include <enclave_anonymbe_t.h>
 
 #ifdef printf
@@ -117,6 +118,15 @@ const char *err_str(int e) {
 
 //------------------------------------------------------------------------------
 std::map<int, SSL *> open_ssl_connections;
+std::mutex conn_mutex;
+//------------------------------------------------------------------------------
+SSL *get_context(int fd) {
+    std::lock_guard<std::mutex> lock(conn_mutex);
+    auto it = open_ssl_connections.find(fd);
+    return it != open_ssl_connections.end() ? it->second : nullptr;
+}
+
+//------------------------------------------------------------------------------
 int tls_accept(int fd, SSL_CTX *ctx) {
     SSL *cli = SSL_new(ctx);
     SSL_set_fd(cli, fd);
@@ -129,13 +139,17 @@ int tls_accept(int fd, SSL_CTX *ctx) {
                ERR_error_string(ERR_get_error(), nullptr));
         return -1;
     }
-    open_ssl_connections[fd] = cli;
-    printf("ciphersuit: %s", SSL_get_current_cipher(cli)->name);
+    {
+        std::lock_guard<std::mutex> lock(conn_mutex);
+        open_ssl_connections[fd] = cli;
+    }
+    printf("ciphersuit: %s\n", SSL_get_current_cipher(cli)->name);
     return 0;
 }
 
 //------------------------------------------------------------------------------
 int ecall_tls_close(int fd) {
+    std::lock_guard<std::mutex> lock(conn_mutex);
     auto it = open_ssl_connections.find(fd);
     if (it != open_ssl_connections.end()) {
         SSL_free(it->second);
@@ -148,14 +162,14 @@ int ecall_tls_close(int fd) {
 //------------------------------------------------------------------------------
 int ecall_tls_recv(int fd) {
     char read_buf[1000];
-    auto it = open_ssl_connections.find(fd);
-    if (it != open_ssl_connections.end()) {
-        int ret = SSL_read(it->second, read_buf, sizeof(read_buf));
+    SSL *ssl = get_context(fd);
+    if (ssl) {
+        int ret = SSL_read(ssl, read_buf, sizeof(read_buf));
         if (ret > 0) {
             ecall_query(fd, read_buf, ret);
             return 0;
         } else {
-            if( ret == 0 ) return -1;
+            if (ret == 0) return -1;
             return -2;
         }
     }
@@ -164,9 +178,9 @@ int ecall_tls_recv(int fd) {
 
 //------------------------------------------------------------------------------
 int tls_send(int fd, const char *buff, size_t len) {
-    auto it = open_ssl_connections.find(fd);
-    if (it != open_ssl_connections.end()) {
-        int ret = SSL_write(it->second, buff, len);
+    SSL *ssl = get_context(fd);
+    if (ssl) {
+        int ret = SSL_write(ssl, buff, len);
         if (ret <= 0) {
             printf("ssl_write err: %d\n", ret);
             return -2;

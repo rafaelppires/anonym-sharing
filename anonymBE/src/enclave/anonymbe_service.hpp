@@ -72,9 +72,10 @@ typename AnonymBE<T>::AMCSError AnonymBE<T>::process_get(
     } else if (command == "/verifier/envelope") {
         std::string ctext;
         auto j = json::parse(content);
-        std::string bucket_key = j.at("bucket_key").get<std::string>();
+        std::string bucket_key = json_str(j,"bucket_key");
+        bucket_key.resize(32,0);
         KeyArray ka =
-            database_.get_keys_of_group(j.at("bucket_id").get<std::string>());
+            database_.get_keys_of_group(json_str(j,"bucket_id"));
         for (const auto &k : ka) {
             std::string key((const char *)k.data(), KEY_SIZE);
             ctext += Crypto::encrypt_aes(key, bucket_key);
@@ -238,6 +239,7 @@ int AnonymBE<T>::init() {
 #ifdef TLS_REQUESTS
     init_openssl( &ctx_ );
 #endif
+    database_.init();
     init_ = true;
     return 0;
 }
