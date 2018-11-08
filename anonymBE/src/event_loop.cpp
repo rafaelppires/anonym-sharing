@@ -1,5 +1,9 @@
-#include <arpa/inet.h>
+#ifdef WRITERPROXY
+#include <enclave_writeproxy_u.h>
+#else
 #include <enclave_anonymbe_u.h>
+#endif
+#include <arpa/inet.h>
 #include <event_loop.h>
 #include <fcntl.h>
 #include <sgx_utils_rp.h>
@@ -178,3 +182,4 @@ void SocketEventLoop::event_loop() {
         }
     }
 }
+

@@ -21,8 +21,7 @@ OpenSSLSGXDir=$(OpenSSLDir)/OpenSSL_SGX/
 OSLLEnclaveW=$(OpenSSLDir)/Wrappers/Enclave
 OSLLAppW=$(OpenSSLDir)/Wrappers/App
 
-#EXECUTABLES=$(addprefix $(BinDir)/, $(SysName))
-EXECUTABLES=$(addprefix $(BinDir)/, $(SysName) writeproxy)
+ExtraExec=writeproxy
 EnclaveSources:=$(SrcDir)/enclave
 
 App_Libs        := pthread sgx_uae_service sgx_urts
@@ -89,10 +88,9 @@ ifeq ($(DEBUG), 1)
 endif
 
 ############## UNTRUSTED #######################################################
-all: $(EXECUTABLES) $(BinDir)/$(EnclaveName).signed.so
-$(ObjDir)/$(SysName).o : $(ObjDir)/$(EnclaveName)_u.o
+all: $(SysName) $(ExtraExec)
 
-$(BinDir)/writeproxy : $(BinDir)/% : $(ObjDir)/%.o $(addprefix $(ObjDir)/,enclave_writeproxy_u.o sgx_initenclave_u.o sgx_utils_rp_u.o event_loop.o sgx_errlist_u.o my_wrappers_impl_u.o writeproxy_ocalls_u.o) $(BinDir)/enclave_%.signed.so | $(BinDir) 
+$(BinDir)/writeproxy : $(BinDir)/% : $(ObjDir)/%.o $(addprefix $(ObjDir)/,enclave_writeproxy_u.o sgx_initenclave_u.o sgx_utils_rp_u.o event_loop_writeproxy_u.o sgx_errlist_u.o my_wrappers_impl_u.o writeproxy_ocalls_u.o) | $(BinDir) 
 	@$(call run_and_test,$(CXX) $(Natv_CXXFlags) -o $@ $^ $(App_Link_Flags),"Link")
 
 $(BinDir)/$(SysName) : $(ObjDir)/$(SysName).o $(NatvObjs) | $(BinDir)
@@ -103,6 +101,9 @@ $(ObjDir)/writeproxy.o : $(SrcDir)/writerproxy/writeproxy.cpp | $(ObjDir)
 
 $(ObjDir)/%.o : $(SrcDir)/%.cpp | $(ObjDir)
 	@$(call run_and_test,$(CXX) $(Natv_CXXFlags) $(NatvInclude) -c -o $@ $<,"CXX")
+
+$(ObjDir)/%_writeproxy_u.o : $(SrcDir)/%.cpp | $(ObjDir)
+	@$(call run_and_test,$(CXX) -DWRITERPROXY $(Natv_CXXFlags) $(NatvInclude) -c -o $@ $<,"CXX")
 
 $(ObjDir)/writeproxy_ocalls_u.o : $(SrcDir)/anonymbe_ocalls.cpp | $(ObjDir)
 	@$(call run_and_test,$(CXX) -DWRITERPROXY $(Natv_CXXFlags) $(NatvInclude) -c -o $@ $<,"CXX")
@@ -119,8 +120,6 @@ $(ObjDir)/%_u.o : $(EnclaveSources)/%_u.c | $(ObjDir)
 $(BinDir) $(ObjDir):
 	@mkdir -p $@
 
-obj/writeproxy.o : $(EnclaveSources)/enclave_writeproxy_u.c
-obj/ecalls_writeproxy_t.o : $(EnclaveSources)/enclave_writeproxy_t.c
 ############## TRUSTED #########################################################
 $(BinDir)/%.signed.so : $(ObjDir)/%.so | $(BinDir)
 	$(eval EName := $(patsubst %.so, %, $(notdir $<)))
@@ -144,19 +143,11 @@ $(ObjDir)/%_t.o : $(SGX_COMMONDIR)/libc_mock/%.c | $(ObjDir)
 $(ObjDir)/%_t.o : $(SGX_COMMONDIR)/libc_mock/%.cpp | $(ObjDir)
 	@$(call run_and_test,$(CXX) -c $< -o $@ $(Encl_CXXFlags) $(EnclCXXInclude),"CXX SGX")
 
-#$(ObjDir)/%_t.o : $(OpenSSLDir)/Wrappers/Enclave/%.cpp | $(ObjDir)
-#	@$(call run_and_test,$(CXX) -c $< -o $@ $(Encl_CXXFlags) $(EnclCXXInclude),"CXX SGX")
-
 $(ObjDir)/%_t.o : $(EnclaveSources)/%.cpp | $(ObjDir)
 	@$(call run_and_test,$(CXX) -c $< -o $@ $(Encl_CXXFlags) $(EnclCXXInclude),"CXX SGX")
 
-#$(ObjDir)/%_t.o : $(SrcDir)/%.cpp | $(ObjDir)
-#	@$(call run_and_test,$(CXX) -c $< -o $@ $(Encl_CXXFlags) $(EnclCXXInclude),"CXX SGX")
-
 $(ObjDir)/%_t.o : $(SGX_COMMONDIR)/%.cpp | $(ObjDir)
 	@$(call run_and_test,$(CXX) -c $< -o $@ $(Encl_CXXFlags) $(EnclCXXInclude),"CXX SGX")
-
-$(ObjDir)/tls_config_t.o : $(EnclaveSources)/enclave_anonymbe_t.c
 
 ################# MONGO stuff ##################################################
 $(ObjDir)/%_t.o : $(MONGO_TRUSTDIR)/%.cpp | $(ObjDir)
@@ -172,7 +163,7 @@ $(ObjDir)/%_u.o : $(MONGO_UNTRUSTDIR)/%.cpp | $(ObjDir)
 	@$(call run_and_test,$(CXX) $(Natv_CXXFlags) $(NatvInclude) -c -o $@ $<,"CXX")
 
 ################# OPENSSL stuff ################################################
-obj/sgx_cryptoall_t.o : $(OpenSSLSGXDir)/libcrypto.a
+$(ObjDir)/sgx_cryptoall_t.o : $(OpenSSLSGXDir)/libcrypto.a
 $(OpenSSLSGXDir)/libcrypto.a : $(OpenSSLSGXDir)/include
 	@make -C $(OpenSSLSGXDir) depend && make -C $(OpenSSLSGXDir)
 
@@ -181,13 +172,17 @@ $(OpenSSLSGXDir)/include :
 
 ################################################################################
 
-.PHONY: clean all anonymbe
+.PHONY: clean all $(SysName) $(ExtraExec)
 
-anonymbe : $(BinDir)/$(SysName) $(BinDir)/$(EnclaveName).signed.so
+$(SysName) $(ExtraExec) : % : $(BinDir)/% $(BinDir)/enclave_%.signed.so
 
 clean:
 	@bash -c "rm -rf $(EnclaveSources)/*_{t,u}.{c,h} $(BinDir) $(ObjDir) $(EnclaveSources)/Ocall_wrappers.{cpp,h} $(SrcDir)/Ocall_implements.{cpp,h}"
 
+$(ObjDir)/$(SysName).o : $(ObjDir)/$(EnclaveName)_u.o
+$(ObjDir)/writeproxy.o : $(EnclaveSources)/enclave_writeproxy_u.c
+$(ObjDir)/ecalls_writeproxy_t.o : $(EnclaveSources)/enclave_writeproxy_t.c
+$(ObjDir)/tls_config_t.o : $(EnclaveSources)/enclave_anonymbe_t.c
 $(ObjDir)/ecalls_anonymbe_t.o : $(OpenSSLSGXDir)/include
 $(EnclaveSources)/ecalls_anonymbe.cpp : $(EnclaveSources)/anonymbe_service.h
 $(EnclaveSources)/anonymbe_service.h : $(EnclaveSources)/anonymbe_service.hpp
