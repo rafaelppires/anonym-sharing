@@ -1,0 +1,6 @@
+[submodule "anonymBE/src/SGX-OpenSSL"]
+	path = anonymBE/src/SGX-OpenSSL
+	url = https://github.com/sparkly9399/SGX-OpenSSL.git
+[submodule "anonymBE/src/mongo-sgx-client"]
+	path = anonymBE/src/mongo-sgx-client
+	url = git@github.com:sebva/mongo-sgx-client.git
