@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: anonymbe-service
+  labels:
+    name: anonymbe
+spec:
+  type: NodePort
+  ports:
+  - port: 4444
+    targetPort: 4444
+    nodePort: 30444
+  selector:
+    role: anonymbe
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: anonymbe
+spec:
+  selector:
+    matchLabels:
+      role: anonymbe
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        role: anonymbe
+    spec:
+      terminationGracePeriodSeconds: 10
+      imagePullSecrets:
+      - name: regcred
+      containers:
+      - name: anonymbe-container
+        image: sebvaucher/anonymbe:0.2
+        stdin: true
+        tty: true
+        ports:
+        - containerPort: 4444
+        resources:
+          requests:
+            intel.com/sgx: 10000
+          limits:
+            intel.com/sgx: 10000
+
