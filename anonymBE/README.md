@@ -19,3 +19,13 @@ $ ./bin/anonymbe
 $ ./src/admin/admin.py 
 ```
 
+## Deploying to Kubernetes
+
+1. Build Docker image
+2. Publish Docker image somewhere accessible to the Kubernetes nodes
+3. Make sure that you have started the MongoDB StatefulSet before
+4. Create the deployment
+```
+kubectl apply -f anonymbe.yml
+```
+5. Query the server from outside Kubernetes on any physical node on port 30444
