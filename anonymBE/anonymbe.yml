@@ -21,7 +21,7 @@ spec:
   selector:
     matchLabels:
       role: anonymbe
-  replicas: 3
+  replicas: 1
   template:
     metadata:
       labels:
@@ -32,14 +32,18 @@ spec:
       - name: regcred
       containers:
       - name: anonymbe-container
-        image: sebvaucher/anonymbe:0.2
+        image: sebvaucher/anonymbe:0.8
+        args:
+        - "./bin/anonymbe"
+        - "-m"
+        - "mongodb://mongod-0.mongodb-service.default.svc.cluster.local:27017,mongod-1.mongodb-service.default.svc.cluster.local:27017,mongod-2.mongodb-service.default.svc.cluster.local:27017/?replicaSet=rs0&ssl=true&sslAllowInvalidCertificates=true&sslAllowInvalidHostnames=true"
         stdin: true
         tty: true
         ports:
         - containerPort: 4444
         resources:
           requests:
-            intel.com/sgx: 10000
+            intel.com/sgx: 5000
           limits:
-            intel.com/sgx: 10000
+            intel.com/sgx: 5000
 
