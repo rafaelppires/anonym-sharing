@@ -59,6 +59,15 @@ void MemDatabase::create_group(const std::string &gname,
 }
 
 //------------------------------------------------------------------------------
+bool MemDatabase::is_user_part_of_group(const std::string &uname, 
+                                        const std::string &gname) {
+    if (groups_.find(gname) != groups_.end()) {
+        return groups_[gname].find(uname) != groups_[gname].end();
+    } else {
+        throw std::invalid_argument("unknown group '"+gname+"'");
+    }
+}
+//------------------------------------------------------------------------------
 void MemDatabase::remove_user_from_group(const std::string &gname,
                                          const std::string &uid) {
     std::lock_guard<std::mutex> lock(gmutex_);

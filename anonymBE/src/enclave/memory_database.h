@@ -16,6 +16,8 @@ class MemDatabase : public Database {
     void create_group(const std::string &gname, const std::string &uid);
     void remove_user_from_group(const std::string &gname,
                                 const std::string &uid);
+    bool is_user_part_of_group(const std::string &uname, 
+                               const std::string &gname);
     KeyArray get_keys_of_group(const std::string &group_name);
 
    private:

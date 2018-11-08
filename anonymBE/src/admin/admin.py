@@ -8,20 +8,12 @@ import requests
 #    getattr(ssl, '_create_unverified_context', None)): 
 #    ssl._create_default_https_context = ssl._create_unverified_context
 
-def create_group( owner_id, group_name ):
-    return json.dumps( { 'user_id' : owner_id,
-                         'group_name' : group_name } )
-
 def create_user( uid ):
     return json.dumps( { 'user_id' : uid } )
 
-def add_user2group( group_name, uid ):
+def groupuser( group_name, uid ):
     return json.dumps( { 'group_name' : group_name,
-                         'new_member_id' : uid } )
-
-def delete_userFgroup( group_name, uid ):
-    return json.dumps( { 'group_name' : group_name,
-                         'revoke_member_id' : uid } )
+                         'user_id' : uid } )
 
 def get_envelope( uid, bucket, key ):
     return json.dumps( { 'user_id' : uid, 'bucket_id' : bucket,
@@ -49,27 +41,33 @@ r = requests.post( URL + '/access/user',
                    data=create_user('user03'), verify=False )
 print(r.text)
 r = requests.post( URL + '/access/group',
-                   data=create_group('user02', 'group02'), verify=False )
+                   data=groupuser('group02','user02'), verify=False )
 print(r.text)
 r = requests.put( URL + '/access/usergroup',
-                  data=add_user2group( 'group02', 'user01' ), verify=False )
+                  data=groupuser( 'group02', 'user01' ), verify=False )
 print(r.text)
 r = requests.put( URL + '/access/usergroup',
-                  data=add_user2group( 'group02', 'user03' ), verify=False )
+                  data=groupuser( 'group02', 'user03' ), verify=False )
 print(r.text)
 r = requests.delete( URL + '/access/usergroup',
-                  data=delete_userFgroup( 'group01', 'user01' ), verify=False )
+                  data=groupuser( 'group01', 'user01' ), verify=False )
 print(r.text)
 r = requests.delete( URL + '/access/usergroup',
-                  data=delete_userFgroup( 'group02', 'user01' ), verify=False )
+                  data=groupuser( 'group02', 'user01' ), verify=False )
 print(r.text)
 r = requests.delete( URL + '/access/usergroup',
-                  data=delete_userFgroup( 'group02', 'user01' ), verify=False )
+                  data=groupuser( 'group02', 'user01' ), verify=False )
 print(r.text)
-r = requests.get( URL + '/verifier/envelope',
+r = requests.post( URL + '/verifier/usergroup',
+                   data=groupuser('group02', 'user01'), verify=False )
+print(r.text)
+r = requests.post( URL + '/verifier/usergroup',
+                   data=groupuser('group02', 'user03'), verify=False )
+print(r.text)
+r = requests.post( URL + '/verifier/envelope',
                   data=get_envelope( 'user01', 'group02', 'abacaxi' ), verify=False )
 print(r.text)
-r = requests.get( URL + '/verifier/envelope',
+r = requests.post( URL + '/verifier/envelope',
                   data=get_envelope( 'user03', 'group02', 'jabuticaba' ), verify=False )
 print(r.text)
 

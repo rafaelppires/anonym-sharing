@@ -69,19 +69,7 @@ typename AnonymBE<T>::ASKYError AnonymBE<T>::process_get(
     KVString &response) {
     if (command == "/access/rights") {
     } else if (command == "/verifier/certify") {
-    } else if (command == "/verifier/envelope") {
-        std::string ctext;
-        auto j = json::parse(content);
-        std::string bucket_key = json_str(j,"bucket_key");
-        bucket_key.resize(32,0);
-        KeyArray ka =
-            database_.get_keys_of_group(json_str(j,"bucket_id"));
-        for (const auto &k : ka) {
-            std::string key((const char *)k.data(), KEY_SIZE);
-            ctext += Crypto::encrypt_aes(key, bucket_key);
-        }
-        response["ciphertext"] = "cB94vvatao56/70EF5TTeMG67MzaxWp4O5xq1k+4jxJQjZMhcl0878ttVUcxXfbqS8DtBBQ/SUyNMdijaONqNc+yo8hZmlLnp7+PM9B9vuiwdXYCNXTzZCBclwV9WNMh";//Crypto::b64_encode(ctext);
-        return ASKY_NOERROR;
+    
     }
     return ASKY_BAD_REQUEST;
 }
@@ -93,7 +81,7 @@ typename AnonymBE<T>::ASKYError AnonymBE<T>::process_put(
     if (command == "/access/usergroup") {
         auto j = json::parse(content);
         database_.add_user_to_group(json_str(j, "group_name"),
-                                    json_str(j, "new_member_id"));
+                                    json_str(j, "user_id"));
         return ASKY_NOERROR;
     } else if (command == "/access/aclmember") {
     } else if (command == "/access/bucketowner") {
@@ -104,21 +92,36 @@ typename AnonymBE<T>::ASKYError AnonymBE<T>::process_put(
 //------------------------------------------------------------------------------
 template <typename T>
 typename AnonymBE<T>::ASKYError AnonymBE<T>::process_post(
-    const std::string &command, const std::string &content,
-    KVString &response) {
+   const std::string &command, const std::string &content, KVString &response) {
+    auto j = json::parse(content);
     if (command == "/access/user") {
-        auto j = json::parse(content);
         unsigned char rnd[KEY_SIZE];
         sgx_read_rand(rnd, sizeof(rnd));
         std::string key = std::string((const char *)rnd, sizeof(rnd));
         database_.create_user(json_str(j, "user_id"), key);
         // if( key == "" ) return ASKY_CREATE_EXISTENT;
-        response["user_key"] = "GJpv0l+QlgBJCUG4E0g5Zwfp9J6rp1h3KIE0LVwZEoU=";//Crypto::b64_encode(key);
+        response["user_key"] = Crypto::b64_encode(key);
         return ASKY_NOERROR;
     } else if (command == "/access/group") {
-        auto j = json::parse(content);
         database_.create_group(json_str(j, "group_name"),
                                json_str(j, "user_id"));
+        return ASKY_NOERROR;
+    } else if (command == "/verifier/envelope") {
+        std::string ctext;
+        std::string bucket_key = json_str(j,"bucket_key");
+        bucket_key.resize(32,0);
+        KeyArray ka =
+            database_.get_keys_of_group(json_str(j,"bucket_id"));
+        for (const auto &k : ka) {
+            std::string key((const char *)k.data(), KEY_SIZE);
+            ctext += Crypto::encrypt_aes(key, bucket_key);
+        }
+        response["ciphertext"] = Crypto::b64_encode(ctext);
+        return ASKY_NOERROR;
+    } else if (command == "/verifier/usergroup") {
+        bool answer = database_.is_user_part_of_group( json_str(j, "user_id"), 
+                                                    json_str(j, "group_name"));
+        response["belongs"] = answer ? "true" : "false";
         return ASKY_NOERROR;
     } else if (command == "/access/acl") {
     } else if (command == "/verifier/acl") {
@@ -134,7 +137,7 @@ typename AnonymBE<T>::ASKYError AnonymBE<T>::process_delete(
     if (command == "/access/usergroup") {
         auto j = json::parse(content);
         database_.remove_user_from_group(json_str(j, "group_name"),
-                                         json_str(j, "revoke_member_id"));
+                                         json_str(j, "user_id"));
         return ASKY_NOERROR;
     } else if (command == "/access/aclmember") {
     }
@@ -217,10 +220,9 @@ template <typename T>
 void AnonymBE<T>::set_positive_response(std::string &rep,
                                         const KVString &response) {
     json j;
-    j["result"] = "OK";
+    j["result"] = "ok";
     for (auto &kv : response) {
         j[kv.first] = kv.second;
-        //printf("_<%s,%s>_\n",kv.first.c_str(),kv.second.c_str());
     }
     std::string content = j.dump(2);
     rep = posrep + std::to_string(content.size()) + eol + eol + content + eol;
@@ -233,8 +235,8 @@ void AnonymBE<T>::set_negative_response(std::string &rep,
                                         const std::string &extra) {
     json j;
     j["result"] = "error";
-    j["msg"] = msg;
-    if (extra != "") j["detail"] = extra;
+    j["detail"] = extra != "" ? extra : msg ;
+    
     std::string content = j.dump(2);
     rep = negrep + std::to_string(content.size()) + eol + eol + content + eol;
 }
@@ -304,7 +306,7 @@ std::string AnonymBE<T>::err_amcs(ASKYError e) {
             return "Could not access Platform Services";
         case ASKY_BAD_REQUEST:
             return "Malformed request. "
-                   "Please, refer to the documentation";
+                   "Please, refer to the documentation.";
         case ASKY_CREATE_EXISTENT:
             return "Tried to create an existing user";
         case ASKY_NON_EXISTENT:
