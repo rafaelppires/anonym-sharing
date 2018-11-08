@@ -1,4 +1,5 @@
 #include <arpa/inet.h>
+#include <enclave_anonymbe_u.h>
 #include <event_loop.h>
 #include <fcntl.h>
 #include <sgx_utils_rp.h>
@@ -7,7 +8,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <cstring>
-#include <enclave_anonymbe_u.h>
 
 extern sgx_enclave_id_t g_eid;
 const std::string SocketEventLoop::eof = "\033EOF\033";
@@ -60,9 +60,11 @@ void SocketEventLoop::consume_fd(int fd, std::string &msg) const {
 #ifdef TLS_REQUESTS
     int ret;
     ecall_tls_recv(g_eid, &ret, fd);
-    if( ret == -1 ) { // connection gracefully closed
+    if (ret == -1) {  // connection gracefully closed
         ecall_tls_close(g_eid, &ret, fd);
         close(fd);
+    } else if (ret != 0) {
+        //printf("TLS Recv: %d\n", ret);
     }
     msg.clear();
 #else
@@ -71,7 +73,7 @@ void SocketEventLoop::consume_fd(int fd, std::string &msg) const {
 
     while ((sz = recv(fd, buff, sizeof(buff), 0)) >= 0) {
         if (sz == 0) {
-            //msg += eof;
+            // msg += eof;
             close(fd);
             break;
         } else {
@@ -139,7 +141,10 @@ void SocketEventLoop::event_loop() {
 
     for (;;) {
         nfds = epoll_wait(epollfd_, events, MAX_EVENTS, -1);
-        if (nfds == -1) exit_error(EXIT_FAILURE, "epoll_wait");
+        if (nfds == -1) {
+            //exit_error(EXIT_FAILURE, "epoll_wait: %s\n", strerror(errno));
+            printf("epoll_wait: %s\n", strerror(errno));
+        }
 
         for (int n = 0; n < nfds; ++n) {
             if (events[n].data.fd == listen_sock) {
@@ -153,9 +158,9 @@ void SocketEventLoop::event_loop() {
 #ifdef TLS_REQUESTS
                 int ret;
                 ecall_tls_accept(g_eid, &ret, conn_sock);
-                if( ret ) {
+                if (ret) {
                     printf("SSL accept failure\n");
-                    close( conn_sock );
+                    close(conn_sock);
                     continue;
                 }
 #endif

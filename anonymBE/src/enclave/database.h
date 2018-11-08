@@ -10,7 +10,7 @@ typedef std::vector<std::array<uint8_t, KEY_SIZE>> KeyArray;
 
 class Database {
    public:
-    bool init();
+    bool init(const std::string &initdata);
     void add_user_to_group(const std::string &gname, const std::string &uname);
     void create_user(const std::string &uname, const std::string &key);
     void create_group(const std::string &gname, const std::string &uid);

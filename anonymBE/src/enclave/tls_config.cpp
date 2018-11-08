@@ -143,7 +143,7 @@ int tls_accept(int fd, SSL_CTX *ctx) {
         std::lock_guard<std::mutex> lock(conn_mutex);
         open_ssl_connections[fd] = cli;
     }
-    printf("ciphersuit: %s\n", SSL_get_current_cipher(cli)->name);
+    //printf("ciphersuit: %s\n", SSL_get_current_cipher(cli)->name);
     return 0;
 }
 
@@ -164,14 +164,20 @@ int ecall_tls_recv(int fd) {
     char read_buf[1000];
     SSL *ssl = get_context(fd);
     if (ssl) {
-        int ret = SSL_read(ssl, read_buf, sizeof(read_buf));
-        if (ret > 0) {
-            ecall_query(fd, read_buf, ret);
-            return 0;
-        } else {
-            if (ret == 0) return -1;
-            return -2;
-        }
+        int ret;
+        do {
+            ERR_clear_error();
+            ret = SSL_read(ssl, read_buf, sizeof(read_buf));
+            if (ret > 0) {
+                ecall_query(fd, read_buf, ret);
+                //return 0;
+            } else {
+                if (ret == 0) return -1;
+                int r = SSL_get_error(ssl, r);
+                //printf(":%s:\n", err_str(r));
+                return -2;
+            }
+        } while( ret > 0 );
     }
     return -3;
 }

@@ -1,91 +1,41 @@
 #define N 9  // input/enclave service threads
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
-
-#include <csignal>
-#include <fstream>
-#include <iostream>
-#include <queue>
-#include <streambuf>
-#include <thread>
-
-#include <sgx_initenclave.h>
-#include <sgx_utils_rp.h>
-
+#define ENCLAVENAME "enclave_anonymbe"
 #include <enclave_anonymbe_u.h>
-#include <event_loop.h>
+#include <anonymbe_args.h>
+#include <argp.h>
+#include <string>
 
-sgx_enclave_id_t g_eid;
+const char *argp_program_version = "A-SKY Key Manager";
+const char *argp_program_bug_address = "<rafael.pires@unine.ch>";
 
-std::condition_variable iqcv, oqcv;
-std::mutex iqmutex, oqmutex;
-
-FdQueue iqueue;  // ready file descriptors
-DataQueue oqueue;
-
-//------------------------------------------------------------------------------
-struct Arguments {
-    size_t port;
+/* Program documentation. */
+static char doc[] = "A-SKY: Anonymous sharing key manager";
+static char args_doc[] = "";
+static struct argp_option options[] = {
+    { "port",   'p', "port", 0, "Listening port"},
+    { "mongo",  'm', "host:port", 0, "Host and port for MongoDB" },
+    { 0 }
 };
 
-//------------------------------------------------------------------------------
-void enclave_thread(int id, const SocketEventLoop& comm) {
-    for (;;) {
-        int fd = -1;
-        {  // sleeps until there is data
-            std::unique_lock<std::mutex> lk(iqmutex);
-            iqcv.wait(lk, [] { return !iqueue.empty(); });
-            fd = iqueue.front();
-            iqueue.pop();
-        }
-
-        std::string msg;
-        comm.consume_fd(fd, msg);
-
-        if (!msg.empty()) {
-            int ret;
-            ecall_query(g_eid, &ret, fd, msg.c_str(), msg.size());
-        }
-    }
+static error_t parse_opt (int key, char *arg, struct argp_state *state) {
+    Arguments *args = (Arguments*)state->input;
+    switch(key) {
+    case 'p':
+        args->port = std::stoi(arg);
+        break;
+    case 'm':
+        strncpy(args->mongo, arg, sizeof(args->mongo));
+        break;
+    default:
+        return ARGP_ERR_UNKNOWN;
+    };
+    return 0;
 }
 
-//------------------------------------------------------------------------------
-void ctrlc_handler(int s) {
-    printf("\033[0m\n(%d) bye!\n", s);
-    ecall_finish(g_eid);
-    destroy_enclave(g_eid);
-    exit(0);
+void init_args(Arguments *args) {
+    args->port = 4444;
+    strncpy(args->mongo, "sgx-3.maas:27017", sizeof(args->mongo));
 }
 
-//------------------------------------------------------------------------------
-int main(int argc, char** argv) {
-    /* Changing dir to where the executable is.*/
-    change_dir(argv[0]);
+#include "sgxserver_bootstrap.cpp"
 
-    // Sets up enclave and initializes remote_attestation
-    if (initialize_enclave(g_eid, "enclave_anonymbe.signed.so",
-                           "enclave.anonymbe.token"))
-        return 1;
-
-    int ret;
-    ecall_init(g_eid, &ret);
-    if (ret) return 2;
-
-    SocketEventLoop communication(iqueue, iqmutex, iqcv);
-    for (int i = 0; i < N; ++i) {
-        std::thread t(enclave_thread, i, communication);
-        t.detach();
-    }
-
-    set_logmask(~0);
-    std::signal(SIGINT, ctrlc_handler);
-
-    Arguments args;
-    args.port = 4444;
-
-    communication.set_listener("*", args.port);
-    communication.event_loop();
-}

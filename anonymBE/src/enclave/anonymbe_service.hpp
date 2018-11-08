@@ -27,7 +27,7 @@ const std::string AnonymBE<T>::magic = "\xCA\xFE\x41MCS";
 //------------------------------------------------------------------------------
 template <typename T>
 AnonymBE<T>::AnonymBE()
-    : /*database_(true),*/ init_(false), error_(AMCS_NOERROR), die_(false) {
+    : /*database_(true),*/ init_(false), error_(ASKY_NOERROR), die_(false) {
     update_mutex_ = SGX_THREAD_MUTEX_INITIALIZER;
     goahead_condition_ = end_condition_ = update_condition_ =
         SGX_THREAD_COND_INITIALIZER;
@@ -64,7 +64,7 @@ bool AnonymBE<T>::http_parse(const std::string &input, std::string &verb,
 using json = nlohmann::json;
 //------------------------------------------------------------------------------
 template <typename T>
-typename AnonymBE<T>::AMCSError AnonymBE<T>::process_get(
+typename AnonymBE<T>::ASKYError AnonymBE<T>::process_get(
     const std::string &command, const std::string &content,
     KVString &response) {
     if (command == "/access/rights") {
@@ -80,30 +80,30 @@ typename AnonymBE<T>::AMCSError AnonymBE<T>::process_get(
             std::string key((const char *)k.data(), KEY_SIZE);
             ctext += Crypto::encrypt_aes(key, bucket_key);
         }
-        response["ciphertext"] = Crypto::b64_encode(ctext);
-        return AMCS_NOERROR;
+        response["ciphertext"] = "cB94vvatao56/70EF5TTeMG67MzaxWp4O5xq1k+4jxJQjZMhcl0878ttVUcxXfbqS8DtBBQ/SUyNMdijaONqNc+yo8hZmlLnp7+PM9B9vuiwdXYCNXTzZCBclwV9WNMh";//Crypto::b64_encode(ctext);
+        return ASKY_NOERROR;
     }
-    return AMCS_BAD_REQUEST;
+    return ASKY_BAD_REQUEST;
 }
 
 //------------------------------------------------------------------------------
 template <typename T>
-typename AnonymBE<T>::AMCSError AnonymBE<T>::process_put(
+typename AnonymBE<T>::ASKYError AnonymBE<T>::process_put(
     const std::string &command, const std::string &content) {
     if (command == "/access/usergroup") {
         auto j = json::parse(content);
         database_.add_user_to_group(json_str(j, "group_name"),
                                     json_str(j, "new_member_id"));
-        return AMCS_NOERROR;
+        return ASKY_NOERROR;
     } else if (command == "/access/aclmember") {
     } else if (command == "/access/bucketowner") {
     }
-    return AMCS_BAD_REQUEST;
+    return ASKY_BAD_REQUEST;
 }
 
 //------------------------------------------------------------------------------
 template <typename T>
-typename AnonymBE<T>::AMCSError AnonymBE<T>::process_post(
+typename AnonymBE<T>::ASKYError AnonymBE<T>::process_post(
     const std::string &command, const std::string &content,
     KVString &response) {
     if (command == "/access/user") {
@@ -112,45 +112,50 @@ typename AnonymBE<T>::AMCSError AnonymBE<T>::process_post(
         sgx_read_rand(rnd, sizeof(rnd));
         std::string key = std::string((const char *)rnd, sizeof(rnd));
         database_.create_user(json_str(j, "user_id"), key);
-        // if( key == "" ) return AMCS_CREATE_EXISTENT;
-        response["user_key"] = Crypto::b64_encode(key);
-        return AMCS_NOERROR;
+        // if( key == "" ) return ASKY_CREATE_EXISTENT;
+        response["user_key"] = "GJpv0l+QlgBJCUG4E0g5Zwfp9J6rp1h3KIE0LVwZEoU=";//Crypto::b64_encode(key);
+        return ASKY_NOERROR;
     } else if (command == "/access/group") {
         auto j = json::parse(content);
         database_.create_group(json_str(j, "group_name"),
                                json_str(j, "user_id"));
-        return AMCS_NOERROR;
+        return ASKY_NOERROR;
     } else if (command == "/access/acl") {
     } else if (command == "/verifier/acl") {
     } else if (command == "/writer/bucket") {
     }
-    return AMCS_BAD_REQUEST;
+    return ASKY_BAD_REQUEST;
 }
 
 //------------------------------------------------------------------------------
 template <typename T>
-typename AnonymBE<T>::AMCSError AnonymBE<T>::process_delete(
+typename AnonymBE<T>::ASKYError AnonymBE<T>::process_delete(
     const std::string &command, const std::string &content) {
     if (command == "/access/usergroup") {
         auto j = json::parse(content);
         database_.remove_user_from_group(json_str(j, "group_name"),
                                          json_str(j, "revoke_member_id"));
-        return AMCS_NOERROR;
+        return ASKY_NOERROR;
     } else if (command == "/access/aclmember") {
     }
-    return AMCS_BAD_REQUEST;
+    return ASKY_BAD_REQUEST;
 }
 
 //------------------------------------------------------------------------------
 template <typename T>
-void AnonymBE<T>::process_input(std::string &rep, const char *buff,
-                                size_t len) {
-    if (!init_) init();
+void AnonymBE<T>::process_input( const std::string &input, std::string &rep ) {
+    if (!init_) {
+#ifdef MEMDATABASE
+        init_ = true;
+#else
+        printf("Attempt to do some processing before initializing\n"); 
+        return;
+#endif
+    } 
 
-    std::string input(buff, len), verb, command, content, extra;
+    std::string verb, command, content, extra;
     bool post, put, get;
-    AMCSError error = AMCS_NOERROR;
-
+    ASKYError error = ASKY_NOERROR;
     KVString response;
     if (http_parse(input, verb, command, content)) {
         try {
@@ -164,32 +169,36 @@ void AnonymBE<T>::process_input(std::string &rep, const char *buff,
                 error = process_delete(command, content);
             }
 
-            if (error == AMCS_BAD_REQUEST) {
+            if (error == ASKY_BAD_REQUEST) {
                 extra = "Unknown command '" + command + "'";
             }
         } catch (nlohmann::detail::out_of_range &e) {
             extra = e.what();
-            error = AMCS_BAD_REQUEST;
+            error = ASKY_BAD_REQUEST;
         } catch (std::invalid_argument &e) {
             extra = e.what();
-            error = AMCS_BAD_REQUEST;
+            error = ASKY_BAD_REQUEST;
         } catch (std::logic_error &e) {  // warning, not error
             response["info"] = e.what();
         } catch (uint32_t e) {
             extra = mongo_error(e);
-            error = AMCS_UNKNOWN;
+            error = ASKY_UNKNOWN;
         } catch (...) {
-            error = AMCS_UNKNOWN;
+            error = ASKY_UNKNOWN;
         }
     } else {
         extra = "Error parsing HTML";
-        error = AMCS_BAD_REQUEST;
+        error = ASKY_BAD_REQUEST;
     }
 
-    if (error == AMCS_NOERROR) {
-        set_positive_response(rep, response);
-    } else {
-        set_negative_response(rep, err_amcs(error), extra);
+    try {
+        if (error == ASKY_NOERROR) {
+            set_positive_response(rep, response);
+        } else {
+            set_negative_response(rep, err_amcs(error), extra);
+        }
+    } catch(nlohmann::detail::exception &e) {
+        printf("Err: %s\n", e.what());
     }
 }
 //------------------------------------------------------------------------------
@@ -211,6 +220,7 @@ void AnonymBE<T>::set_positive_response(std::string &rep,
     j["result"] = "OK";
     for (auto &kv : response) {
         j[kv.first] = kv.second;
+        //printf("_<%s,%s>_\n",kv.first.c_str(),kv.second.c_str());
     }
     std::string content = j.dump(2);
     rep = posrep + std::to_string(content.size()) + eol + eol + content + eol;
@@ -235,12 +245,17 @@ int AnonymBE<T>::input_file(const std::string &data) {}
 
 //------------------------------------------------------------------------------
 template <typename T>
-int AnonymBE<T>::init() {
+int AnonymBE<T>::init(Arguments *args) {
 #ifdef TLS_REQUESTS
     init_openssl( &ctx_ );
 #endif
-    database_.init();
-    init_ = true;
+    try {
+        database_.init(args->mongo);
+        init_ = true;
+    } catch(uint32_t e) {
+        printf("Error: %lu\n", e);
+        return -1;
+    }
     return 0;
 }
 
@@ -279,27 +294,27 @@ std::string AnonymBE<T>::err_msg(int v) {
 
 //------------------------------------------------------------------------------
 template <typename T>
-std::string AnonymBE<T>::err_amcs(AMCSError e) {
+std::string AnonymBE<T>::err_amcs(ASKYError e) {
     switch (e) {
-        case AMCS_NOERROR:
+        case ASKY_NOERROR:
             return "No error";
-        case AMCS_INITIALIZATION_FAIL:
+        case ASKY_INITIALIZATION_FAIL:
             return "Fail to initialize AnonymBE";
-        case AMCS_ERROR_SERVICE:
+        case ASKY_ERROR_SERVICE:
             return "Could not access Platform Services";
-        case AMCS_BAD_REQUEST:
+        case ASKY_BAD_REQUEST:
             return "Malformed request. "
                    "Please, refer to the documentation";
-        case AMCS_CREATE_EXISTENT:
+        case ASKY_CREATE_EXISTENT:
             return "Tried to create an existing user";
-        case AMCS_NON_EXISTENT:
+        case ASKY_NON_EXISTENT:
             return "Tried to get or update a "
                    "non-existing counter";
-        case AMCS_WRAPUP:
+        case ASKY_WRAPUP:
             return "Service is being terminated";
-        case AMCS_UNKNOWN:
+        case ASKY_UNKNOWN:
         default:
-            return "Unknown error";
+            return "Unknown error: " + std::to_string(e);
     }
 }
 

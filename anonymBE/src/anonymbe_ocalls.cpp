@@ -1,4 +1,8 @@
+#ifdef WRITERPROXY
+#include <enclave_writeproxy_u.h>
+#else
 #include <enclave_anonymbe_u.h>
+#endif
 #include <stdio.h>
 #include <sys/time.h>
 
