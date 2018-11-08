@@ -40,9 +40,9 @@ static X509 *generateCertificate(EVP_PKEY *pkey) {
 
     X509_NAME *name = X509_get_subject_name(x509);
     X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC,
-                               (const unsigned char *)"US", -1, -1, 0);
+                               (const unsigned char *)"CH", -1, -1, 0);
     X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC,
-                               (const unsigned char *)"YourCN", -1, -1, 0);
+                               (const unsigned char *)"A-SKY", -1, -1, 0);
     X509_set_issuer_name(x509, name);
     X509_sign(x509, pkey, EVP_sha256());
     return x509;
@@ -53,7 +53,7 @@ static SSL_CTX *create_context() {
     const SSL_METHOD *method;
     SSL_CTX *ctx;
 
-    method = SSLv23_server_method();
+    method = TLSv1_2_server_method();
 
     ctx = SSL_CTX_new(method);
     if (!ctx) {
@@ -72,10 +72,6 @@ static void configure_context(SSL_CTX *ctx) {
     SSL_CTX_set_default_passwd_cb(ctx, password_cb);
     SSL_CTX_use_PrivateKey(ctx, pkey);
 
-    RSA *rsa = RSA_generate_key(512, RSA_F4, NULL, NULL);
-    SSL_CTX_set_tmp_rsa(ctx, rsa);
-    RSA_free(rsa);
-
     SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, 0);
 }
 
@@ -87,6 +83,7 @@ void init_openssl(SSL_CTX **ctx) {
 
     printf("%s\n", SSLeay_version(SSLEAY_VERSION));
     *ctx = create_context();
+    SSL_CTX_set_ecdh_auto(*ctx, 1);
     configure_context(*ctx);
 }
 
