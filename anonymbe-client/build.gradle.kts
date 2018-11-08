@@ -1,8 +1,9 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    id("org.jetbrains.kotlin.kapt") version "1.3.0"
     kotlin("jvm") version "1.3.0"
+    id("org.jetbrains.kotlin.kapt") version "1.3.0"
+    id("me.champeau.gradle.jmh") version "0.4.7"
 }
 
 group = "ch.unine"
@@ -19,7 +20,7 @@ dependencies {
     compile("com.squareup.retrofit2:retrofit:2.4.0")
     compile("com.squareup.retrofit2:converter-moshi:2.4.0")
     compile("com.squareup.okhttp3:okhttp:3.11.0")
-    implementation("com.squareup.moshi:moshi:1.7.0")
+    compile("com.squareup.moshi:moshi:1.7.0")
 }
 
 tasks.withType<KotlinCompile> {
