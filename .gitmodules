@@ -4,3 +4,6 @@
 [submodule "anonymBE/src/mongo-sgx-client"]
 	path = anonymBE/src/mongo-sgx-client
 	url = git@github.com:sebva/mongo-sgx-client.git
+[submodule "anonymBE/src/sgx_common"]
+	path = anonymBE/src/sgx_common
+	url = https://gitlab.securecloud.works/rafael.pires/sgx_common.git

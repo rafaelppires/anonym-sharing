@@ -2,7 +2,7 @@ SGX_SDK              := /opt/intel/sgxsdk
 SGX_LIBRARY_PATH     := $(SGX_SDK)/lib64
 SGX_ENCLAVE_SIGNER   := $(SGX_SDK)/bin/x64/sgx_sign
 SGX_EDGER8R          := $(SGX_SDK)/bin/x64/sgx_edger8r
-SGX_COMMONDIR  := $(realpath src/mongo-sgx-client/sgx_common)
+SGX_COMMONDIR  := $(realpath src/sgx_common)
 
 App_Link_Flags  := $(addprefix -L, $(App_Lib_Dirs)) \
                    $(addprefix -l, $(App_Libs))
