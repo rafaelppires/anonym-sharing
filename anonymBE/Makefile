@@ -21,7 +21,8 @@ OpenSSLSGXDir=$(OpenSSLDir)/OpenSSL_SGX/
 OSLLEnclaveW=$(OpenSSLDir)/Wrappers/Enclave
 OSLLAppW=$(OpenSSLDir)/Wrappers/App
 
-EXECUTABLES=$(addprefix $(BinDir)/, $(SysName))
+#EXECUTABLES=$(addprefix $(BinDir)/, $(SysName))
+EXECUTABLES=$(addprefix $(BinDir)/, $(SysName) writeproxy)
 EnclaveSources:=$(SrcDir)/enclave
 
 App_Libs        := pthread sgx_uae_service sgx_urts
@@ -89,38 +90,52 @@ endif
 
 ############## UNTRUSTED #######################################################
 all: $(EXECUTABLES) $(BinDir)/$(EnclaveName).signed.so
-
 $(ObjDir)/$(SysName).o : $(ObjDir)/$(EnclaveName)_u.o
+
+$(BinDir)/writeproxy : $(BinDir)/% : $(ObjDir)/%.o $(addprefix $(ObjDir)/,enclave_writeproxy_u.o sgx_initenclave_u.o sgx_utils_rp_u.o event_loop.o sgx_errlist_u.o my_wrappers_impl_u.o writeproxy_ocalls_u.o) $(BinDir)/enclave_%.signed.so | $(BinDir) 
+	@$(call run_and_test,$(CXX) $(Natv_CXXFlags) -o $@ $^ $(App_Link_Flags),"Link")
 
 $(BinDir)/$(SysName) : $(ObjDir)/$(SysName).o $(NatvObjs) | $(BinDir)
 	@$(call run_and_test,$(CXX) $(Natv_CXXFlags) -o $@ $^ $(App_Link_Flags),"Link")
 
+$(ObjDir)/writeproxy.o : $(SrcDir)/writerproxy/writeproxy.cpp | $(ObjDir)
+	@$(call run_and_test,$(CXX) $(Natv_CXXFlags) $(NatvInclude) -c -o $@ $<,"CXX")
+
 $(ObjDir)/%.o : $(SrcDir)/%.cpp | $(ObjDir)
 	@$(call run_and_test,$(CXX) $(Natv_CXXFlags) $(NatvInclude) -c -o $@ $<,"CXX")
+
+$(ObjDir)/writeproxy_ocalls_u.o : $(SrcDir)/anonymbe_ocalls.cpp | $(ObjDir)
+	@$(call run_and_test,$(CXX) -DWRITERPROXY $(Natv_CXXFlags) $(NatvInclude) -c -o $@ $<,"CXX")
 
 $(ObjDir)/%_u.o : $(SGX_COMMONDIR)/%.cpp | $(ObjDir)
 	@$(call run_and_test,$(CXX) $(Natv_CXXFlags) $(NatvInclude) -c -o $@ $<,"CXX")
 
-$(EnclaveSources)/$(EnclaveName)_u.c : $(EnclaveSources)/$(EnclaveName).edl $(SGX_EDGER8R)
+$(EnclaveSources)/%_u.c : $(EnclaveSources)/%.edl $(SGX_EDGER8R)
 	@$(call run_and_test,cd $(dir $@) && $(SGX_EDGER8R) --untrusted ./$(notdir $<) $(addprefix --search-path ,. $(EDLSearchPaths)),"Edger SGX")
 
-$(ObjDir)/$(EnclaveName)_u.o : $(EnclaveSources)/$(EnclaveName)_u.c | $(ObjDir)
+$(ObjDir)/%_u.o : $(EnclaveSources)/%_u.c | $(ObjDir)
 	@$(call run_and_test,$(CC) $(Natv_CFlags) $(NatvInclude) -c $< -o $@,"CC")
 
 $(BinDir) $(ObjDir):
 	@mkdir -p $@
 
+obj/writeproxy.o : $(EnclaveSources)/enclave_writeproxy_u.c
+obj/ecalls_writeproxy_t.o : $(EnclaveSources)/enclave_writeproxy_t.c
 ############## TRUSTED #########################################################
 $(BinDir)/%.signed.so : $(ObjDir)/%.so | $(BinDir)
-	@$(call run_and_test,$(SGX_ENCLAVE_SIGNER) sign -enclave $< -config $(EnclaveSources)/$(EnclaveName).config.xml -out $@ -key $(EnclaveSources)/enclave-key.pem -ignore-init-sec-error > /dev/null 2>&1,"Sign SGX")
+	$(eval EName := $(patsubst %.so, %, $(notdir $<)))
+	@$(call run_and_test,$(SGX_ENCLAVE_SIGNER) sign -enclave $< -config $(EnclaveSources)/$(EName).config.xml -out $@ -key $(EnclaveSources)/enclave-key.pem -ignore-init-sec-error > /dev/null 2>&1,"Sign SGX")
+
+$(ObjDir)/enclave_writeproxy.so : $(ObjDir)/enclave_%.so : $(addprefix $(ObjDir)/, enclave_%_t.o ecalls_%_t.o tls_config_t.o ssl_wrappers_t.o my_wrappers_writeproxy_t.o libc_proxy_t.o file_mock_t.o) | $(ObjDir)
+	@$(call run_and_test,$(CXX) $^ -o $@ $(EnclaveLFlags),"Link SGX")
 
 $(ObjDir)/$(EnclaveName).so : $(EnclAllObjs) | $(ObjDir)
 	@$(call run_and_test,$(CXX) $^ -o $@ $(EnclaveLFlags),"Link SGX")
 
-$(EnclaveSources)/$(EnclaveName)_t.c : $(EnclaveSources)/$(EnclaveName).edl $(SGX_EDGER8R)
+$(EnclaveSources)/%_t.c : $(EnclaveSources)/%.edl $(SGX_EDGER8R)
 	@$(call run_and_test,cd $(dir $@) && $(SGX_EDGER8R) --trusted ./$(notdir $<) $(addprefix --search-path ,. $(EDLSearchPaths)),"Edger SGX")
 
-$(ObjDir)/$(EnclaveName)_t.o : $(EnclaveSources)/$(EnclaveName)_t.c | $(ObjDir)
+$(ObjDir)/%_t.o : $(EnclaveSources)/%_t.c | $(ObjDir)
 	@$(call run_and_test,$(CC) -c $< -o $@ $(Encl_CFlags) $(EnclCInclude),"CC SGX")
 
 $(ObjDir)/%_t.o : $(SGX_COMMONDIR)/libc_mock/%.c | $(ObjDir)
@@ -141,12 +156,17 @@ $(ObjDir)/%_t.o : $(EnclaveSources)/%.cpp | $(ObjDir)
 $(ObjDir)/%_t.o : $(SGX_COMMONDIR)/%.cpp | $(ObjDir)
 	@$(call run_and_test,$(CXX) -c $< -o $@ $(Encl_CXXFlags) $(EnclCXXInclude),"CXX SGX")
 
+$(ObjDir)/tls_config_t.o : $(EnclaveSources)/enclave_anonymbe_t.c
+
 ################# MONGO stuff ##################################################
 $(ObjDir)/%_t.o : $(MONGO_TRUSTDIR)/%.cpp | $(ObjDir)
 	@$(call run_and_test,$(CXX) -c $< -o $@ $(Encl_CXXFlags) $(EnclCXXInclude),"CXX SGX")
 
 $(ObjDir)/%_t.o : $(MONGO_TRUSTDIR)/%.c | $(ObjDir)
 	@$(call run_and_test,$(CC) -c $< -o $@ $(Encl_CFlags) $(EnclCInclude),"CC SGX")
+
+$(ObjDir)/%_writeproxy_t.o : $(MONGO_TRUSTDIR)/%.c | $(ObjDir)
+	@$(call run_and_test,$(CC) -c $< -o $@ -DWRITERPROXY $(Encl_CFlags) $(EnclCInclude),"CC SGX")
 
 $(ObjDir)/%_u.o : $(MONGO_UNTRUSTDIR)/%.cpp | $(ObjDir)
 	@$(call run_and_test,$(CXX) $(Natv_CXXFlags) $(NatvInclude) -c -o $@ $<,"CXX")
