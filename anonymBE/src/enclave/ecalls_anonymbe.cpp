@@ -2,6 +2,7 @@
 #include <enclave_anonymbe_t.h>
 #include <sgx_cryptoall.h>
 #include <stdio.h>
+#include <mutex>
 
 #ifdef MEMDATABASE
 #include <memory_database.h>

@@ -181,7 +181,9 @@ $(OpenSSLSGXDir)/include :
 
 ################################################################################
 
-.PHONY: clean all
+.PHONY: clean all anonymbe
+
+anonymbe : $(BinDir)/$(SysName) $(BinDir)/$(EnclaveName).signed.so
 
 clean:
 	@bash -c "rm -rf $(EnclaveSources)/*_{t,u}.{c,h} $(BinDir) $(ObjDir) $(EnclaveSources)/Ocall_wrappers.{cpp,h} $(SrcDir)/Ocall_implements.{cpp,h}"
