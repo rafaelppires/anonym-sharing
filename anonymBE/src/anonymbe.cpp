@@ -13,7 +13,7 @@ static char doc[] = "A-SKY: Anonymous sharing key manager";
 static char args_doc[] = "";
 static struct argp_option options[] = {
     { "port",   'p', "port", 0, "Listening port"},
-    { "mongo",  'm', "host:port", 0, "Host and port for MongoDB" },
+    { "mongo",  'm', "string", 0, "Connection string for MongoDB" },
     { 0 }
 };
 
@@ -34,7 +34,7 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state) {
 
 void init_args(Arguments *args) {
     args->port = 4444;
-    strncpy(args->mongo, "sgx-3.maas:27017", sizeof(args->mongo));
+    strncpy(args->mongo, "mongodb://sgx-3.maas:27017/?ssl=true&sslAllowInvalidCertificates=true&sslAllowInvalidHostnames=true", sizeof(args->mongo));
 }
 
 #include "sgxserver_bootstrap.cpp"
