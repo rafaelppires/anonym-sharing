@@ -1,8 +1,10 @@
 package ch.unine.anonymbe.api
 
+import com.jakewharton.retrofit2.adapter.kotlin.coroutines.CoroutineCallAdapterFactory
+import kotlinx.coroutines.Deferred
 import okhttp3.ConnectionSpec
 import okhttp3.OkHttpClient
-import retrofit2.Call
+import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import retrofit2.http.Body
@@ -17,21 +19,21 @@ import kotlin.reflect.KClass
 
 interface AdminApi {
     @POST("access/user")
-    fun createUser(@Body user: User): Call<UserResult>
+    fun createUser(@Body user: User): Deferred<Response<UserResult>>
 
     @POST("access/group")
-    fun createGroup(@Body group: UserGroup): Call<Result>
+    fun createGroup(@Body group: UserGroup): Deferred<Response<Result>>
 
     @PUT("access/usergroup")
-    fun addUserToGroup(@Body userGroup: UserGroup): Call<Result>
+    fun addUserToGroup(@Body userGroup: UserGroup): Deferred<Response<Result>>
 
     @DELETE("access/usergroup")
-    fun deleteUserFromGroup(@Body userGroup: UserGroup): Call<Result>
+    fun deleteUserFromGroup(@Body userGroup: UserGroup): Deferred<Response<Result>>
 }
 
 interface UserApi {
     @POST("verifier/envelope")
-    fun getEnvelope(@Body bucket: Bucket): Call<EnvelopeResult>
+    fun getEnvelope(@Body bucket: Bucket): Deferred<Response<EnvelopeResult>>
 }
 
 object Api {
@@ -55,12 +57,13 @@ object Api {
             .baseUrl(url)
             .addConverterFactory(MoshiConverterFactory.create())
             .client(okHttpClient)
+            .addCallAdapterFactory(CoroutineCallAdapterFactory())
             .build()
         return retrofit
             .create(apiType.java)
     }
 
-    const val RESULT_OK = "OK"
+    const val RESULT_OK = "ok"
     const val RESULT_ERROR = "error"
-    private const val DEFAULT_URL = "https://hoernli-6.maas:30444/"
+    const val DEFAULT_URL = "https://hoernli-6.maas:30445/"
 }

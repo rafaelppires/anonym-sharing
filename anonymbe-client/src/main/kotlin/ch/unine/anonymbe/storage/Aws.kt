@@ -1,4 +1,4 @@
-package ch.unine.anonymbe.minio
+package ch.unine.anonymbe.storage
 
 import software.amazon.awssdk.auth.credentials.AwsCredentials
 import software.amazon.awssdk.core.sync.RequestBody
