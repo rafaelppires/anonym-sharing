@@ -18,8 +18,6 @@ dependencies {
 
     kapt("com.squareup.moshi:moshi-kotlin-codegen:1.7.0")
 
-    compile("com.jakewharton.retrofit:retrofit2-kotlin-coroutines-adapter:0.9.2")
-
     compile("software.amazon.awssdk:s3:2.0.0-preview-12")
     compile("io.minio:minio:5.0.2")
 

@@ -1,12 +1,8 @@
 package ch.unine.anonymbe.client
 
-import ch.unine.anonymbe.api.Api
-import ch.unine.anonymbe.api.Bucket
-import ch.unine.anonymbe.api.EnvelopeResult
-import ch.unine.anonymbe.api.UserApi
+import ch.unine.anonymbe.api.*
 import ch.unine.anonymbe.storage.StorageApi
-import kotlinx.coroutines.Deferred
-import retrofit2.Response
+import retrofit2.Call
 import java.io.*
 import java.nio.ByteBuffer
 import java.security.SecureRandom
@@ -24,12 +20,15 @@ class Client(private val userId: String, apiUrl: String, private val storageClie
     private val b64Decoder: Base64.Decoder = Base64.getDecoder()
     private val random = SecureRandom()
 
-    fun generateSymmetricKeyAndGetEnvelope(groupId: String): Pair<SymmetricKey, Deferred<Response<EnvelopeResult>>> {
+    fun generateSymmetricKeyAndGetEnvelope(groupId: String): Pair<SymmetricKey, String> {
         val key = generateKey()
         val bucket = Bucket(userId, groupId, b64Encoder.encodeToString(key.encoded))
-        val envelopeDeferred = apiClient.getEnvelope(bucket)
+        val envelopeCall = apiClient.getEnvelope(bucket).execute()
+        envelopeCall.throwExceptionIfNotReallySuccessful()
 
-        return Pair(key, envelopeDeferred)
+        val envelope = envelopeCall.body()?.ciphertext!!
+
+        return Pair(key, envelope)
     }
 
     fun uploadToCloud(
@@ -60,15 +59,14 @@ class Client(private val userId: String, apiUrl: String, private val storageClie
          * Format of the envelope:
          *  16 bytes of IV
          *  32 bytes of encrypted key
+         *  16 bytes of AES-GCM tag
          */
         val userKeySpec = SecretKeySpec(userKey, KEY_ALGORITHM)
         val envelopeBuffer = ByteBuffer.wrap(envelope)
-        val iv = ByteArray(16)
-        val encryptedKey = ByteArray(32)
+        val encryptedKey = ByteArray(16 + 32 + 16)
         var decryptedKey: ByteArray? = null
 
         while (envelopeBuffer.hasRemaining()) {
-            envelopeBuffer.get(iv)
             envelopeBuffer.get(encryptedKey)
 
             try {
@@ -96,7 +94,7 @@ class Client(private val userId: String, apiUrl: String, private val storageClie
 
     private fun initCipher(key: SymmetricKey, iv: ByteArray, opMode: Int) =
         Cipher.getInstance(CIPHER_ALGORITHM).also { cipher ->
-            val paramSpec = GCMParameterSpec(CIPHER_KEY_BITS, iv)
+            val paramSpec = GCMParameterSpec(CIPHER_TAG_BYTES * 8, iv)
             cipher.init(opMode, key, paramSpec)
         }
 
@@ -104,21 +102,29 @@ class Client(private val userId: String, apiUrl: String, private val storageClie
     private fun cipherAes(data: ByteArray, key: SymmetricKey, associatedData: ByteArray?, opMode: Int): ByteArray {
         val dataBuffer = ByteBuffer.wrap(data)
 
-        val iv = ByteArray(CIPHER_IV_BITS / 8).also {
+        val iv = ByteArray(CIPHER_IV_BYTES).also {
             when (opMode) {
                 Cipher.ENCRYPT_MODE -> random.nextBytes(it)
                 Cipher.DECRYPT_MODE -> dataBuffer.get(it)
+                else -> throw IllegalArgumentException()
             }
         }
         val cipher = initCipher(key, iv, opMode)
         associatedData?.let {
             cipher.updateAAD(it)
         }
-        val processedData = cipher.doFinal(data)
-        val result = ByteBuffer.allocate((CIPHER_IV_BITS / 8) + processedData.size)
-        result.put(iv)
-        result.put(processedData)
-        return result.array()
+
+        val processedData = cipher.doFinal(data, CIPHER_IV_BYTES, data.size - CIPHER_IV_BYTES)
+        return when (opMode) {
+            Cipher.ENCRYPT_MODE -> {
+                val result = ByteBuffer.allocate(CIPHER_IV_BYTES + processedData.size)
+                result.put(iv)
+                result.put(processedData)
+                return result.array()
+            }
+            Cipher.DECRYPT_MODE -> processedData
+            else -> throw IllegalArgumentException()
+        }
     }
 
     @Throws(AEADBadTagException::class)
@@ -149,15 +155,20 @@ class Client(private val userId: String, apiUrl: String, private val storageClie
         storageClient.storeObject(groupName, objectName, encryptedData, dataLength)
     }
 
-    private fun generateKey(): SymmetricKey = ByteArray(CIPHER_KEY_BITS / 8).let {
+    private fun generateKey(): SymmetricKey = ByteArray(CIPHER_KEY_BYTES).let {
         random.nextBytes(it)
         SecretKeySpec(it, KEY_ALGORITHM)
+    }
+
+    fun verifyEnvelope(envelope: String, userKey: String) {
+        tryDecrypt(ByteArray(0), b64Decoder.decode(envelope), b64Decoder.decode(userKey))
     }
 
     companion object {
         private const val CIPHER_ALGORITHM = "AES/GCM/NoPadding"
         private const val KEY_ALGORITHM = "AES"
-        private const val CIPHER_KEY_BITS = 128
-        private const val CIPHER_IV_BITS = 128
+        private const val CIPHER_KEY_BYTES = 32
+        private const val CIPHER_TAG_BYTES = 16
+        private const val CIPHER_IV_BYTES = 16
     }
 }
