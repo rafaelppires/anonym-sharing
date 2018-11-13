@@ -1,14 +1,16 @@
 package ch.unine.anonymbe
 
-import ch.unine.anonymbe.api.*
+import ch.unine.anonymbe.api.AdminApi
+import ch.unine.anonymbe.api.Api
+import ch.unine.anonymbe.api.User
+import ch.unine.anonymbe.api.UserGroup
 import ch.unine.anonymbe.client.Client
 import ch.unine.anonymbe.storage.Minio
-import kotlinx.coroutines.runBlocking
 import java.net.ProtocolException
 import java.util.*
 import kotlin.random.Random
 
-fun main(args: Array<String>) = runBlocking<Unit> {
+fun main(args: Array<String>) {
     val userId = UUID.randomUUID().toString()
     val groupId = "testgroupdemo"
     val filename = "testFileDemo"
@@ -18,7 +20,7 @@ fun main(args: Array<String>) = runBlocking<Unit> {
     val adminApi = Api.build(AdminApi::class)
 
     println("Creating user")
-    val userResult = adminApi.createUser(User(userId)).await()
+    val userResult = adminApi.createUser(User(userId)).execute()
     val userKey = if (userResult.isSuccessful) {
         userResult.body()?.user_key ?: throw Exception("Cannot get user key")
     } else {
@@ -27,7 +29,7 @@ fun main(args: Array<String>) = runBlocking<Unit> {
 
     println("Creating group")
     try {
-        val groupResult = adminApi.createGroup(UserGroup(userId, groupId)).await()
+        val groupResult = adminApi.createGroup(UserGroup(userId, groupId)).execute()
         if (!groupResult.isSuccessful) {
             println("Cannot create group: ${userResult.errorBody()?.string()}")
         }
@@ -39,20 +41,16 @@ fun main(args: Array<String>) = runBlocking<Unit> {
 
     val client = Client(userId, Api.DEFAULT_URL, storageClient)
 
-    println("Generating symmetric key and asking refmon for envelope")
-    val (symmetricKey, deferredEnvelope) = client.generateSymmetricKeyAndGetEnvelope(groupId)
-
     println("Generating dummy data")
     val dummyData = Random.nextBytes(512)
 
-    println("Await on envelope call")
-    val envelopeResult = deferredEnvelope.await()
-    envelopeResult.throwExceptionIfNotReallySuccessful()
+    println("Generating symmetric key and asking refmon for envelope")
+    val (symmetricKey, envelope) = client.generateSymmetricKeyAndGetEnvelope(groupId)
+
+    print("Verifying envelope")
+    client.verifyEnvelope(envelope, userKey)
 
     println("Success on getting the envelope")
-
-    println("Opening the envelope")
-    val envelope = envelopeResult.body()!!.ciphertext
 
     println("Upload encrypted file and envelope to the cloud")
     client.uploadToCloud(dummyData, envelope, symmetricKey, groupId, filename)

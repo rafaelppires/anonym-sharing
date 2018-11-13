@@ -1,10 +1,8 @@
 package ch.unine.anonymbe.api
 
-import com.jakewharton.retrofit2.adapter.kotlin.coroutines.CoroutineCallAdapterFactory
-import kotlinx.coroutines.Deferred
 import okhttp3.ConnectionSpec
 import okhttp3.OkHttpClient
-import retrofit2.Response
+import retrofit2.Call
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import retrofit2.http.Body
@@ -19,21 +17,21 @@ import kotlin.reflect.KClass
 
 interface AdminApi {
     @POST("access/user")
-    fun createUser(@Body user: User): Deferred<Response<UserResult>>
+    fun createUser(@Body user: User): Call<UserResult>
 
     @POST("access/group")
-    fun createGroup(@Body group: UserGroup): Deferred<Response<Result>>
+    fun createGroup(@Body group: UserGroup): Call<Result>
 
     @PUT("access/usergroup")
-    fun addUserToGroup(@Body userGroup: UserGroup): Deferred<Response<Result>>
+    fun addUserToGroup(@Body userGroup: UserGroup): Call<Result>
 
     @DELETE("access/usergroup")
-    fun deleteUserFromGroup(@Body userGroup: UserGroup): Deferred<Response<Result>>
+    fun deleteUserFromGroup(@Body userGroup: UserGroup): Call<Result>
 }
 
 interface UserApi {
     @POST("verifier/envelope")
-    fun getEnvelope(@Body bucket: Bucket): Deferred<Response<EnvelopeResult>>
+    fun getEnvelope(@Body bucket: Bucket): Call<EnvelopeResult>
 }
 
 object Api {
@@ -57,7 +55,6 @@ object Api {
             .baseUrl(url)
             .addConverterFactory(MoshiConverterFactory.create())
             .client(okHttpClient)
-            .addCallAdapterFactory(CoroutineCallAdapterFactory())
             .build()
         return retrofit
             .create(apiType.java)
