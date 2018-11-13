@@ -1,4 +1,4 @@
-#define N 9  // input/enclave service threads
+#define N 1  // input/enclave service threads
 #define ENCLAVENAME "enclave_anonymbe"
 #include <enclave_anonymbe_u.h>
 #include <anonymbe_args.h>
