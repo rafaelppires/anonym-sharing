@@ -43,7 +43,7 @@ fun main(args: Array<String>) = runBlocking<Unit> {
     val (symmetricKey, deferredEnvelope) = client.generateSymmetricKeyAndGetEnvelope(groupId)
 
     println("Generating dummy data")
-    val dummyData = Random.nextBytes(4 * 1024)
+    val dummyData = Random.nextBytes(512)
 
     println("Await on envelope call")
     val envelopeResult = deferredEnvelope.await()
@@ -63,6 +63,6 @@ fun main(args: Array<String>) = runBlocking<Unit> {
     val retrievedData: ByteArray = client.retrieveFromCloud(userKey, groupId, filename)
 
     val b64Encoder = Base64.getEncoder()
-    println("Original data: ${b64Encoder.encode(dummyData)}")
-    println("Retrieved data: ${b64Encoder.encode(retrievedData)}")
+    println("Original data: ${b64Encoder.encodeToString(dummyData)}")
+    println("Retrieved data: ${b64Encoder.encodeToString(retrievedData)}")
 }

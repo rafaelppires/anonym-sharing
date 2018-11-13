@@ -60,15 +60,14 @@ class Client(private val userId: String, apiUrl: String, private val storageClie
          * Format of the envelope:
          *  16 bytes of IV
          *  32 bytes of encrypted key
+         *  16 bytes of AES-GCM tag
          */
         val userKeySpec = SecretKeySpec(userKey, KEY_ALGORITHM)
         val envelopeBuffer = ByteBuffer.wrap(envelope)
-        val iv = ByteArray(16)
-        val encryptedKey = ByteArray(32)
+        val encryptedKey = ByteArray(16 + 32 + 16)
         var decryptedKey: ByteArray? = null
 
         while (envelopeBuffer.hasRemaining()) {
-            envelopeBuffer.get(iv)
             envelopeBuffer.get(encryptedKey)
 
             try {
@@ -104,21 +103,29 @@ class Client(private val userId: String, apiUrl: String, private val storageClie
     private fun cipherAes(data: ByteArray, key: SymmetricKey, associatedData: ByteArray?, opMode: Int): ByteArray {
         val dataBuffer = ByteBuffer.wrap(data)
 
-        val iv = ByteArray(CIPHER_IV_BITS / 8).also {
+        val iv = ByteArray(CIPHER_IV_BYTES).also {
             when (opMode) {
                 Cipher.ENCRYPT_MODE -> random.nextBytes(it)
                 Cipher.DECRYPT_MODE -> dataBuffer.get(it)
+                else -> throw IllegalArgumentException()
             }
         }
         val cipher = initCipher(key, iv, opMode)
         associatedData?.let {
             cipher.updateAAD(it)
         }
-        val processedData = cipher.doFinal(data)
-        val result = ByteBuffer.allocate((CIPHER_IV_BITS / 8) + processedData.size)
-        result.put(iv)
-        result.put(processedData)
-        return result.array()
+
+        val processedData = cipher.doFinal(data, CIPHER_IV_BYTES, data.size - CIPHER_IV_BYTES)
+        return when (opMode) {
+            Cipher.ENCRYPT_MODE -> {
+                val result = ByteBuffer.allocate(CIPHER_IV_BYTES + processedData.size)
+                result.put(iv)
+                result.put(processedData)
+                return result.array()
+            }
+            Cipher.DECRYPT_MODE -> processedData
+            else -> throw IllegalArgumentException()
+        }
     }
 
     @Throws(AEADBadTagException::class)
@@ -159,5 +166,6 @@ class Client(private val userId: String, apiUrl: String, private val storageClie
         private const val KEY_ALGORITHM = "AES"
         private const val CIPHER_KEY_BITS = 128
         private const val CIPHER_IV_BITS = 128
+        private const val CIPHER_IV_BYTES = CIPHER_IV_BITS / 8
     }
 }
