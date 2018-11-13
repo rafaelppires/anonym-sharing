@@ -1,0 +1,7 @@
+FROM sebvaucher/sgx-base:sgx_2.3.1
+
+COPY . ./
+RUN make -C src/mongo-sgx-client/ SGX_MODE=HW; exit 0
+RUN make MEMDATABASE=1 anonymbe
+
+CMD ["./bin/anonymbe"]
