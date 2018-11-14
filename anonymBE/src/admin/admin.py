@@ -65,9 +65,9 @@ r = requests.post( URL + '/verifier/usergroup',
                    data=groupuser('group02', 'user03'), verify=False )
 print(r.text)
 r = requests.post( URL + '/verifier/envelope',
-                  data=get_envelope( 'user01', 'group02', 'abacaxi' ), verify=False )
+                  data=get_envelope( 'user01', 'group02', 'YWJhY2F4aQ==' ), verify=False )
 print(r.text)
 r = requests.post( URL + '/verifier/envelope',
-                  data=get_envelope( 'user03', 'group02', 'jabuticaba' ), verify=False )
+                  data=get_envelope( 'user03', 'group02', 'amFidXRpY2FiYQ==' ), verify=False )
 print(r.text)
 
