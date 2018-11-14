@@ -12,7 +12,7 @@ import kotlin.random.Random
 
 fun main(args: Array<String>) {
     val userId = UUID.randomUUID().toString()
-    val groupId = "testgroupdemo"
+    val groupId = UUID.randomUUID().toString()
     val filename = "testFileDemo"
 
     val storageClient = Minio()
@@ -47,10 +47,12 @@ fun main(args: Array<String>) {
     println("Generating symmetric key and asking refmon for envelope")
     val (symmetricKey, envelope) = client.generateSymmetricKeyAndGetEnvelope(groupId)
 
-    print("Verifying envelope")
-    client.verifyEnvelope(envelope, userKey)
-
-    println("Success on getting the envelope")
+    println("Verifying envelope")
+    if (client.verifyEnvelope(userKey, envelope, symmetricKey.encoded)) {
+        println("Success on getting the envelope")
+    } else {
+        throw Exception("Content of the envelope is not what we sent!")
+    }
 
     println("Upload encrypted file and envelope to the cloud")
     client.uploadToCloud(dummyData, envelope, symmetricKey, groupId, filename)
