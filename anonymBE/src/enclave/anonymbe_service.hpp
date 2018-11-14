@@ -108,7 +108,7 @@ typename AnonymBE<T>::ASKYError AnonymBE<T>::process_post(
         return ASKY_NOERROR;
     } else if (command == "/verifier/envelope") {
         std::string ctext;
-        std::string bucket_key = json_str(j,"bucket_key");
+        std::string bucket_key = Crypto::b64_decode(json_str(j,"bucket_key"));
         bucket_key.resize(32,0);
         KeyArray ka =
             database_.get_keys_of_group(json_str(j,"bucket_id"));
