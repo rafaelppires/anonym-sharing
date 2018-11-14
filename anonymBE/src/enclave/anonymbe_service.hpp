@@ -111,7 +111,7 @@ typename AnonymBE<T>::ASKYError AnonymBE<T>::process_post(
         std::string bucket_key = Crypto::b64_decode(json_str(j,"bucket_key"));
         bucket_key.resize(32,0);
         KeyArray ka =
-            database_.get_keys_of_group(json_str(j,"bucket_id"));
+            database_.get_keys_of_group(json_str(j,"group_id"));
         for (const auto &k : ka) {
             std::string key((const char *)k.data(), KEY_SIZE);
             ctext += Crypto::encrypt_aesgcm(key, bucket_key);

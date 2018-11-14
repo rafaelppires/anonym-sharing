@@ -16,7 +16,7 @@ def groupuser( group_name, uid ):
                          'user_id' : uid } )
 
 def get_envelope( uid, bucket, key ):
-    return json.dumps( { 'user_id' : uid, 'bucket_id' : bucket,
+    return json.dumps( { 'user_id' : uid, 'group_id' : bucket,
                          'bucket_key': key } )
 
 def sync_reqrep( message ):
