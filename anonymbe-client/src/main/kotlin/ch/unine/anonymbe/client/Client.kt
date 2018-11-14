@@ -1,8 +1,10 @@
 package ch.unine.anonymbe.client
 
-import ch.unine.anonymbe.api.*
+import ch.unine.anonymbe.api.Api
+import ch.unine.anonymbe.api.Bucket
+import ch.unine.anonymbe.api.UserApi
+import ch.unine.anonymbe.api.throwExceptionIfNotReallySuccessful
 import ch.unine.anonymbe.storage.StorageApi
-import retrofit2.Call
 import java.io.*
 import java.nio.ByteBuffer
 import java.security.SecureRandom
@@ -168,9 +170,8 @@ class Client(private val userId: String, apiUrl: String, private val storageClie
         SecretKeySpec(it, KEY_ALGORITHM)
     }
 
-    fun verifyEnvelope(envelope: String, userKey: String) {
-        tryDecrypt(ByteArray(0), b64Decoder.decode(envelope), b64Decoder.decode(userKey))
-    }
+    fun verifyEnvelope(userKey: String, envelope: String, expectedContent: ByteArray): Boolean =
+        expectedContent.contentEquals(openEnvelope(b64Decoder.decode(userKey), b64Decoder.decode(envelope)))
 
     companion object {
         private const val CIPHER_ALGORITHM = "AES/GCM/NoPadding"
