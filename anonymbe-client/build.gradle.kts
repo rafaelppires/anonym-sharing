@@ -25,6 +25,8 @@ dependencies {
     compile("com.squareup.retrofit2:converter-moshi:2.4.0")
     compile("com.squareup.okhttp3:okhttp:3.11.0")
     compile("com.squareup.moshi:moshi:1.7.0")
+
+    testCompile("org.jetbrains.kotlin:kotlin-test-junit:1.3.0")
 }
 
 tasks.withType<KotlinCompile> {
