@@ -57,13 +57,19 @@ class Client(private val userId: String, apiUrl: String, private val storageClie
     private fun tryDecrypt(encryptedData: ByteArray, envelope: ByteArray, userKey: ByteArray): ByteArray {
         /*
          * Format of the envelope:
-         *  16 bytes of IV
+         *  12 bytes of IV
          *  32 bytes of encrypted key
          *  16 bytes of AES-GCM tag
          */
+        val decryptedKey: ByteArray = openEnvelope(userKey, envelope)
+
+        return decryptAes(encryptedData, SecretKeySpec(decryptedKey, KEY_ALGORITHM), envelope)
+    }
+
+    internal fun openEnvelope(userKey: ByteArray, envelope: ByteArray): ByteArray {
         val userKeySpec = SecretKeySpec(userKey, KEY_ALGORITHM)
         val envelopeBuffer = ByteBuffer.wrap(envelope)
-        val encryptedKey = ByteArray(16 + 32 + 16)
+        val encryptedKey = ByteArray(CIPHER_IV_BYTES + CIPHER_KEY_BYTES + CIPHER_TAG_BYTES)
         var decryptedKey: ByteArray? = null
 
         while (envelopeBuffer.hasRemaining()) {
@@ -80,8 +86,7 @@ class Client(private val userId: String, apiUrl: String, private val storageClie
         if (decryptedKey == null) {
             throw Exception("User key not in envelope")
         }
-
-        return decryptAes(encryptedData, SecretKeySpec(decryptedKey, KEY_ALGORITHM), envelope)
+        return decryptedKey
     }
 
     private fun encryptAndEncodeFile(data: ByteArray, envelope: String, key: SymmetricKey): Pair<InputStream, Long> {
@@ -114,7 +119,11 @@ class Client(private val userId: String, apiUrl: String, private val storageClie
             cipher.updateAAD(it)
         }
 
-        val processedData = cipher.doFinal(data, CIPHER_IV_BYTES, data.size - CIPHER_IV_BYTES)
+        val dataOffset = when (opMode) {
+            Cipher.DECRYPT_MODE -> CIPHER_IV_BYTES
+            else -> 0
+        }
+        val processedData = cipher.doFinal(data, dataOffset, data.size - dataOffset)
         return when (opMode) {
             Cipher.ENCRYPT_MODE -> {
                 val result = ByteBuffer.allocate(CIPHER_IV_BYTES + processedData.size)
@@ -127,12 +136,11 @@ class Client(private val userId: String, apiUrl: String, private val storageClie
         }
     }
 
-    @Throws(AEADBadTagException::class)
-    private fun encryptAes(data: ByteArray, key: SymmetricKey, associatedData: ByteArray? = null) =
+    internal fun encryptAes(data: ByteArray, key: SymmetricKey, associatedData: ByteArray? = null) =
         cipherAes(data, key, associatedData, Cipher.ENCRYPT_MODE)
 
     @Throws(AEADBadTagException::class)
-    private fun decryptAes(data: ByteArray, key: SymmetricKey, associatedData: ByteArray? = null) =
+    internal fun decryptAes(data: ByteArray, key: SymmetricKey, associatedData: ByteArray? = null) =
         cipherAes(data, key, associatedData, Cipher.DECRYPT_MODE)
 
     private fun encodeEnvelopeAndData(envelope: ByteArray, data: ByteArray): Pair<InputStream, Long> {
@@ -169,6 +177,6 @@ class Client(private val userId: String, apiUrl: String, private val storageClie
         private const val KEY_ALGORITHM = "AES"
         private const val CIPHER_KEY_BYTES = 32
         private const val CIPHER_TAG_BYTES = 16
-        private const val CIPHER_IV_BYTES = 16
+        private const val CIPHER_IV_BYTES = 12
     }
 }
