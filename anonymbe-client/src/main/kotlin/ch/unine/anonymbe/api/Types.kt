@@ -1,6 +1,5 @@
 package ch.unine.anonymbe.api
 
-import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import retrofit2.Response
 
@@ -18,7 +17,6 @@ data class User(
 @JsonClass(generateAdapter = true)
 data class Bucket(
     val user_id: String,
-    @Json(name = "bucket_id")
     val group_id: String,
     val bucket_key: String
 )
@@ -76,10 +74,10 @@ fun <T : Result> Response<T>.throwExceptionIfNotSuccessful() {
 
 @Throws(Exception::class)
 fun <T : Result> Response<T>.throwExceptionIfNotReallySuccessful() {
-    val body: Any? = if (isSuccessful) {
-        body()
+    val body: String? = if (isSuccessful) {
+        body()?.toString()
     } else {
-        errorBody()
+        errorBody()?.string()
     }
     if (!isReallySuccessful) {
         throw Exception("Unsuccessful API call. HTTP ${code()}. Body: $body")

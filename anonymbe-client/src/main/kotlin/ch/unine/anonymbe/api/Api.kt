@@ -62,5 +62,5 @@ object Api {
 
     const val RESULT_OK = "ok"
     const val RESULT_ERROR = "error"
-    const val DEFAULT_URL = "https://hoernli-6.maas:30445/"
+    const val DEFAULT_URL = "https://hoernli-6.maas:30444/"
 }
