@@ -225,7 +225,7 @@ void AnonymBE<T>::set_positive_response(std::string &rep,
         j[kv.first] = kv.second;
     }
     std::string content = j.dump(2);
-    rep = posrep + std::to_string(content.size()) + eol + eol + content + eol;
+    rep = posrep + std::to_string(content.size()) + eol + eol + content;
 }
 
 //------------------------------------------------------------------------------
@@ -238,7 +238,7 @@ void AnonymBE<T>::set_negative_response(std::string &rep,
     j["detail"] = extra != "" ? extra : msg ;
     
     std::string content = j.dump(2);
-    rep = negrep + std::to_string(content.size()) + eol + eol + content + eol;
+    rep = negrep + std::to_string(content.size()) + eol + eol + content;
 }
 
 //------------------------------------------------------------------------------
