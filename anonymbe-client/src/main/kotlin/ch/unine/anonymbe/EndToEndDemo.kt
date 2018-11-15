@@ -6,7 +6,6 @@ import ch.unine.anonymbe.api.User
 import ch.unine.anonymbe.api.UserGroup
 import ch.unine.anonymbe.client.Client
 import ch.unine.anonymbe.storage.Minio
-import java.net.ProtocolException
 import java.util.*
 import kotlin.random.Random
 
@@ -28,13 +27,9 @@ fun main(args: Array<String>) {
     }
 
     println("Creating group")
-    try {
-        val groupResult = adminApi.createGroup(UserGroup(userId, groupId)).execute()
-        if (!groupResult.isSuccessful) {
-            println("Cannot create group: ${userResult.errorBody()?.string()}")
-        }
-    } catch (e: ProtocolException) {
-        e.printStackTrace()
+    val groupResult = adminApi.createGroup(UserGroup(userId, groupId)).execute()
+    if (!groupResult.isSuccessful) {
+        println("Cannot create group: ${userResult.errorBody()?.string()}")
     }
 
     println("Admin part done")

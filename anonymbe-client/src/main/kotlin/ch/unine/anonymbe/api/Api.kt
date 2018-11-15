@@ -50,6 +50,11 @@ object Api {
             }.socketFactory, trustAllCertificatesManager)
             .hostnameVerifier { _, _ -> true }
             .connectionSpecs(listOf(ConnectionSpec.RESTRICTED_TLS))
+            /* Log all requests if needed
+            .addInterceptor(HttpLoggingInterceptor().apply {
+                level = HttpLoggingInterceptor.Level.BODY
+            })
+            */
             .build()
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
