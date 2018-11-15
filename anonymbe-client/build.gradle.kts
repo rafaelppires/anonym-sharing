@@ -9,6 +9,17 @@ plugins {
 group = "ch.unine"
 version = "0.1"
 
+jmh {
+    warmupForks = 0
+    fork = 1
+
+    warmup = "5s"
+    warmupIterations = 1
+
+    timeOnIteration = "10s"
+    iterations = 5
+}
+
 repositories {
     mavenCentral()
 }
