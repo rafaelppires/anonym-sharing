@@ -3,14 +3,22 @@ package ch.unine.anonymbe
 import ch.unine.anonymbe.api.AdminApi
 import ch.unine.anonymbe.api.Api
 import ch.unine.anonymbe.api.User
-import org.openjdk.jmh.annotations.Benchmark
-import org.openjdk.jmh.annotations.Scope
-import org.openjdk.jmh.annotations.State
+import ch.unine.anonymbe.api.throwExceptionIfNotReallySuccessful
+import org.openjdk.jmh.annotations.*
 
 @State(Scope.Thread)
 open class AdminBenchmark {
-    private val service = Api.build(AdminApi::class)
+    @Param("https://hoernli-6.maas:30444/", "https://hoernli-6.maas:30445/")
+    @JvmField
+    var endpointUrl: String = ""
+    private lateinit var service: AdminApi
     private var counter = 0
+
+    @Setup(Level.Trial)
+    fun setup() {
+        service = Api.build(AdminApi::class, endpointUrl)
+        service.deleteAllData().execute().throwExceptionIfNotReallySuccessful()
+    }
 
     @Benchmark
     fun addUserBenchmark() {

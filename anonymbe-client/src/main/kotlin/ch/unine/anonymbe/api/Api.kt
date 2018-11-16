@@ -27,6 +27,9 @@ interface AdminApi {
 
     @DELETE("access/usergroup")
     fun deleteUserFromGroup(@Body userGroup: UserGroup): Call<Result>
+
+    @DELETE("access/all")
+    fun deleteAllData(): Call<Result>
 }
 
 interface UserApi {
