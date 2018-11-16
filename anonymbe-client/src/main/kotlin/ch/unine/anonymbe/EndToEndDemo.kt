@@ -10,6 +10,15 @@ import java.util.*
 import kotlin.random.Random
 
 fun main(args: Array<String>) {
+    endToEndDemo(Random.nextBytes(512))
+}
+
+/**
+ * Do an end-to-end demonstration of the full system.
+ * @param dummyData Data to send to the Cloud
+ * @return If all goes well, the same dummyData after it has done a round trip to the Cloud storage.
+ */
+fun endToEndDemo(dummyData: ByteArray): ByteArray {
     val userId = UUID.randomUUID().toString()
     val groupId = UUID.randomUUID().toString()
     val filename = "testFileDemo"
@@ -36,9 +45,6 @@ fun main(args: Array<String>) {
 
     val client = Client(userId, Api.DEFAULT_URL, storageClient)
 
-    println("Generating dummy data")
-    val dummyData = Random.nextBytes(512)
-
     println("Generating symmetric key and asking refmon for envelope")
     val (symmetricKey, envelope) = client.generateSymmetricKeyAndGetEnvelope(groupId)
 
@@ -60,4 +66,6 @@ fun main(args: Array<String>) {
     val b64Encoder = Base64.getEncoder()
     println("Original data: ${b64Encoder.encodeToString(dummyData)}")
     println("Retrieved data: ${b64Encoder.encodeToString(retrievedData)}")
+
+    return retrievedData
 }
