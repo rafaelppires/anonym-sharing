@@ -59,6 +59,13 @@ void MemDatabase::create_group(const std::string &gname,
 }
 
 //------------------------------------------------------------------------------
+void MemDatabase::delete_all_data() {
+    std::lock_guard<std::mutex> ulock(umutex_), glock(gmutex_);
+    users_.clear();
+    groups_.clear();
+}
+
+//------------------------------------------------------------------------------
 bool MemDatabase::is_user_part_of_group(const std::string &uname, 
                                         const std::string &gname) {
     if (groups_.find(gname) != groups_.end()) {

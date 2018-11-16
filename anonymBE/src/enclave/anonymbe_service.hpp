@@ -144,6 +144,9 @@ typename AnonymBE<T>::ASKYError AnonymBE<T>::process_delete(
                                          json_str(j, "user_id"));
         return ASKY_NOERROR;
     } else if (command == "/access/aclmember") {
+    } else if (command == "/access/all") {
+        database_.delete_all_data();
+        return ASKY_NOERROR;
     }
     return ASKY_BAD_REQUEST;
 }
