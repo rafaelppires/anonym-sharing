@@ -32,16 +32,30 @@ spec:
       - name: regcred
       containers:
       - name: anonymbe-mem-container
-        image: sebvaucher/anonymbe:0.8-mem
+        image: sebvaucher/anonymbe:0.17-mem
         args:
         - "./bin/anonymbe"
         stdin: true
         tty: true
         ports:
-        - containerPort: 4444
+        - name: service-port
+          containerPort: 4444
         resources:
           requests:
             intel.com/sgx: 5000
           limits:
             intel.com/sgx: 5000
-
+        readinessProbe:
+          httpGet:
+            path: /ping
+            port: service-port
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 3
+        livenessProbe:
+          httpGet:
+            path: /ping
+            port: service-port
+            scheme: HTTPS
+          initialDelaySeconds: 20
+          periodSeconds: 10
