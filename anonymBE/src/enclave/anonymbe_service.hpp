@@ -70,7 +70,11 @@ typename AnonymBE<T>::ASKYError AnonymBE<T>::process_get(
     if (command == "/access/rights") {
     } else if (command == "/verifier/certify") {
     
+    } else if (command == "/ping") {
+        // GET endpoint for Kubernetes probe
+        return ASKY_NOERROR;
     }
+
     return ASKY_BAD_REQUEST;
 }
 
