@@ -56,7 +56,7 @@ object Encryption {
                 val result = ByteBuffer.allocate(CIPHER_IV_BYTES + processedData.size)
                 result.put(iv)
                 result.put(processedData)
-                return result.array()
+                result.array()
             }
             Cipher.DECRYPT_MODE -> processedData
             else -> throw IllegalArgumentException()

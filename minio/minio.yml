@@ -68,6 +68,16 @@ spec:
         persistentVolumeClaim:
           # Name of the PVC created earlier
           claimName: minio-pv-claim
+      - name: secret-volume
+        secret:
+          secretName: tls-ssl-minio
+          items:
+          - key: public.crt
+            path: public.crt
+          - key: private.key
+            path: private.key
+          - key: public.crt
+            path: CAs/public.crt
       containers:
       - name: minio
         # Pulls the default Minio image from Docker Hub
@@ -87,6 +97,8 @@ spec:
         volumeMounts:
         - name: storage # must match the volume name, above
           mountPath: "/storage"
+        - name: secret-volume
+          mountPath: /root/.minio/certs
 ---
 apiVersion: v1
 kind: Service
