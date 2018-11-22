@@ -2,7 +2,10 @@ package ch.unine.anonymbe
 
 import ch.unine.anonymbe.Deployments.ANONYMBE_MEM_URL
 import ch.unine.anonymbe.Deployments.ANONYMBE_MONGO_URL
-import io.fabric8.kubernetes.client.DefaultKubernetesClient
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 
 object Deployments {
     const val ANONYMBE_MONGO_URL = "https://hoernli-6.maas:30444/"
@@ -22,20 +25,20 @@ enum class Deployment(val deploymentName: String, val apiUrl: String) {
 }
 
 object Cluster {
-    private val client
-        get() = DefaultKubernetesClient()
-
     fun scaleAnonymBEService(deployment: Deployment, instances: Int) {
-        print("Scaling anonymbe to $instances replicas...")
-        client
-            .apps()
-            .deployments()
-            .inNamespace(ANONYMBE_NAMESPACE)
-            .withName(deployment.deploymentName)
-            .scale(instances, true)
-        client.close()
-        println(" scaled!")
-    }
+        print("Scaling ${deployment.deploymentName} to $instances replicas...")
 
-    private const val ANONYMBE_NAMESPACE = "default"
+        Runtime.getRuntime()
+            .exec("kubectl scale deployment --replicas=$instances ${deployment.deploymentName}")
+            .also {
+                thread {
+                    val input = BufferedReader(InputStreamReader(it.inputStream))
+                    while (true) {
+                        input.readLine()?.let(::println) ?: break
+                    }
+                }
+                println(" scaled!")
+            }
+            .waitFor(5, TimeUnit.SECONDS)
+    }
 }

@@ -43,8 +43,6 @@ dependencies {
     compile("com.squareup.moshi:moshi:1.7.0")
 
     testCompile("org.jetbrains.kotlin:kotlin-test-junit:1.3.10")
-
-    jmh("io.fabric8:kubernetes-client:4.1.0")
 }
 
 tasks.withType<KotlinCompile> {
