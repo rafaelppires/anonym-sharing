@@ -1,8 +1,9 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.3.0"
-    id("org.jetbrains.kotlin.kapt") version "1.3.0"
+    id("com.github.johnrengelman.shadow") version "4.0.2"
+    kotlin("jvm") version "1.3.10"
+    id("org.jetbrains.kotlin.kapt") version "1.3.10"
     id("me.champeau.gradle.jmh") version "0.4.7"
 }
 
@@ -12,6 +13,7 @@ version = "0.1"
 jmh {
     warmupForks = 0
     fork = 1
+    threads = 4
 
     warmup = "5s"
     warmupIterations = 1
@@ -40,7 +42,7 @@ dependencies {
     }
     compile("com.squareup.moshi:moshi:1.7.0")
 
-    testCompile("org.jetbrains.kotlin:kotlin-test-junit:1.3.0")
+    testCompile("org.jetbrains.kotlin:kotlin-test-junit:1.3.10")
 }
 
 tasks.withType<KotlinCompile> {
