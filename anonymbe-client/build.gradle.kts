@@ -13,13 +13,13 @@ version = "0.1"
 jmh {
     warmupForks = 0
     fork = 1
-    threads = 4
+    threads = 1
 
     warmup = "5s"
     warmupIterations = 1
 
     timeOnIteration = "10s"
-    iterations = 5
+    iterations = 1
 }
 
 repositories {
@@ -43,6 +43,8 @@ dependencies {
     compile("com.squareup.moshi:moshi:1.7.0")
 
     testCompile("org.jetbrains.kotlin:kotlin-test-junit:1.3.10")
+
+    jmh("io.fabric8:kubernetes-client:4.1.0")
 }
 
 tasks.withType<KotlinCompile> {

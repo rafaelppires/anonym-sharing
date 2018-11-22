@@ -1,5 +1,6 @@
 package ch.unine.anonymbe.api
 
+import okhttp3.ConnectionPool
 import okhttp3.ConnectionSpec
 import okhttp3.OkHttpClient
 import retrofit2.Call
@@ -12,6 +13,7 @@ import retrofit2.http.POST
 import retrofit2.http.PUT
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
+import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLContext
 import javax.net.ssl.X509TrustManager
 import kotlin.reflect.KClass
@@ -39,27 +41,30 @@ interface UserApi {
 }
 
 object Api {
+    private val trustAllCertificatesManager = object : X509TrustManager {
+        override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
+
+        override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
+
+        override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
+    }
+
+    val okHttpClient: OkHttpClient = OkHttpClient.Builder()
+        .callTimeout(2, TimeUnit.SECONDS)
+        .connectionPool(ConnectionPool(5, 2, TimeUnit.SECONDS))
+        .sslSocketFactory(SSLContext.getInstance("TLS").also {
+            it.init(null, arrayOf(trustAllCertificatesManager), SecureRandom())
+        }.socketFactory, trustAllCertificatesManager)
+        .hostnameVerifier { _, _ -> true }
+        .connectionSpecs(listOf(ConnectionSpec.RESTRICTED_TLS))
+        /* Log all requests if needed
+        .addInterceptor(HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BODY
+        })
+        */
+        .build()
+
     inline fun <reified T : Any> build(url: String = DEFAULT_URL): T {
-        val trustAllCertificatesManager = object : X509TrustManager {
-            override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
-
-            override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
-
-            override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
-        }
-
-        val okHttpClient = OkHttpClient.Builder()
-            .sslSocketFactory(SSLContext.getInstance("TLS").also {
-                it.init(null, arrayOf(trustAllCertificatesManager), SecureRandom())
-            }.socketFactory, trustAllCertificatesManager)
-            .hostnameVerifier { _, _ -> true }
-            .connectionSpecs(listOf(ConnectionSpec.RESTRICTED_TLS))
-            /* Log all requests if needed
-            .addInterceptor(HttpLoggingInterceptor().apply {
-                level = HttpLoggingInterceptor.Level.BODY
-            })
-            */
-            .build()
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
             .addConverterFactory(MoshiConverterFactory.create())
