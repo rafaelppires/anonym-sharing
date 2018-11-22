@@ -9,7 +9,7 @@ import java.io.*
 import java.util.*
 
 class Client(private val userId: String, apiUrl: String, private val storageClient: StorageApi) {
-    private val apiClient: UserApi = Api.build(UserApi::class, apiUrl)
+    private val apiClient: UserApi = Api.build(apiUrl)
     private val b64Encoder: Base64.Encoder = Base64.getEncoder()
     private val b64Decoder: Base64.Decoder = Base64.getDecoder()
 

@@ -11,12 +11,13 @@ open class AdminBenchmark {
     @Param("https://hoernli-6.maas:30444/", "https://hoernli-6.maas:30445/")
     @JvmField
     var endpointUrl: String = ""
+
     private lateinit var service: AdminApi
     private var counter = 0
 
     @Setup(Level.Trial)
     fun setup() {
-        service = Api.build(AdminApi::class, endpointUrl)
+        service = Api.build(endpointUrl)
         service.deleteAllData().execute().throwExceptionIfNotReallySuccessful()
     }
 

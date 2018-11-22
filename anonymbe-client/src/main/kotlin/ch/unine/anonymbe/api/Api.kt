@@ -5,6 +5,7 @@ import okhttp3.OkHttpClient
 import retrofit2.Call
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
+import retrofit2.create
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.POST
@@ -38,7 +39,7 @@ interface UserApi {
 }
 
 object Api {
-    fun <T : Any> build(apiType: KClass<T>, url: String = DEFAULT_URL): T {
+    inline fun <reified T : Any> build(url: String = DEFAULT_URL): T {
         val trustAllCertificatesManager = object : X509TrustManager {
             override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
 
@@ -64,8 +65,7 @@ object Api {
             .addConverterFactory(MoshiConverterFactory.create())
             .client(okHttpClient)
             .build()
-        return retrofit
-            .create(apiType.java)
+        return retrofit.create()
     }
 
     const val RESULT_OK = "ok"

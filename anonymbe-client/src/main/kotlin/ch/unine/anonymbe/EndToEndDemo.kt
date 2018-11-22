@@ -25,7 +25,7 @@ fun endToEndDemo(dummyData: ByteArray): ByteArray {
 
     val storageClient = Minio()
 
-    val adminApi = Api.build(AdminApi::class)
+    val adminApi = Api.build<AdminApi>()
 
     println("Creating user")
     val userResult = adminApi.createUser(User(userId)).execute()

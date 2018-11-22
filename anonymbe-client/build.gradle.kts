@@ -32,10 +32,9 @@ dependencies {
     compile("software.amazon.awssdk:s3:2.0.0-preview-12")
     compile("io.minio:minio:5.0.2")
 
-    compile("com.squareup.retrofit2:retrofit:2.4.0")
-    compile("com.squareup.retrofit2:converter-moshi:2.4.0")
-    compile("com.squareup.okhttp3:okhttp:3.11.0")
-    compile("com.squareup.okhttp3:logging-interceptor:3.11.0")
+    compile("com.squareup.retrofit2:retrofit:2.5.0")
+    compile("com.squareup.retrofit2:converter-moshi:2.5.0")
+    compile("com.squareup.okhttp3:okhttp:3.12.0")
     compile("com.squareup.moshi:moshi:1.7.0")
 
     testCompile("org.jetbrains.kotlin:kotlin-test-junit:1.3.0")
