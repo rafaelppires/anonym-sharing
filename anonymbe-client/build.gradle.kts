@@ -34,7 +34,10 @@ dependencies {
 
     compile("com.squareup.retrofit2:retrofit:2.5.0")
     compile("com.squareup.retrofit2:converter-moshi:2.5.0")
-    compile("com.squareup.okhttp3:okhttp:3.12.0")
+    "com.squareup.okhttp3:okhttp:3.12.0".also {
+        compile(it)
+        jmh(it)
+    }
     compile("com.squareup.moshi:moshi:1.7.0")
 
     testCompile("org.jetbrains.kotlin:kotlin-test-junit:1.3.0")
