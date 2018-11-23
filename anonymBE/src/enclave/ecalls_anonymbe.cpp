@@ -46,10 +46,10 @@ bool html_buffer( int fd, std::string &input ) {
                 }
             }
         }
-    } else if( html_buff.find(fd) == html_buff.end() ) {
-        printf("Not cool\n");
+    } else {
+        return false;
     }
-    return true; 
+    return true;
 }
 
 //------------------------------------------------------------------------------

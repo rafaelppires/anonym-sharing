@@ -1,16 +1,19 @@
 package ch.unine.anonymbe.api
 
+import okhttp3.ConnectionPool
 import okhttp3.ConnectionSpec
 import okhttp3.OkHttpClient
 import retrofit2.Call
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
+import retrofit2.create
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
+import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLContext
 import javax.net.ssl.X509TrustManager
 import kotlin.reflect.KClass
@@ -27,6 +30,9 @@ interface AdminApi {
 
     @DELETE("access/usergroup")
     fun deleteUserFromGroup(@Body userGroup: UserGroup): Call<Result>
+
+    @DELETE("access/all")
+    fun deleteAllData(): Call<Result>
 }
 
 interface UserApi {
@@ -35,32 +41,39 @@ interface UserApi {
 }
 
 object Api {
-    fun <T : Any> build(apiType: KClass<T>, url: String = DEFAULT_URL): T {
-        val trustAllCertificatesManager = object : X509TrustManager {
-            override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
+    private val trustAllCertificatesManager = object : X509TrustManager {
+        override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
 
-            override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
+        override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
 
-            override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
-        }
+        override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
+    }
 
-        val okHttpClient = OkHttpClient.Builder()
-            .sslSocketFactory(SSLContext.getInstance("TLS").also {
-                it.init(null, arrayOf(trustAllCertificatesManager), SecureRandom())
-            }.socketFactory, trustAllCertificatesManager)
-            .hostnameVerifier { _, _ -> true }
-            .connectionSpecs(listOf(ConnectionSpec.RESTRICTED_TLS))
-            .build()
+    val okHttpClient: OkHttpClient = OkHttpClient.Builder()
+        .callTimeout(2, TimeUnit.SECONDS)
+        .connectionPool(ConnectionPool(5, 2, TimeUnit.SECONDS))
+        .sslSocketFactory(SSLContext.getInstance("TLS").also {
+            it.init(null, arrayOf(trustAllCertificatesManager), SecureRandom())
+        }.socketFactory, trustAllCertificatesManager)
+        .hostnameVerifier { _, _ -> true }
+        .connectionSpecs(listOf(ConnectionSpec.RESTRICTED_TLS))
+        /* Log all requests if needed
+        .addInterceptor(HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BODY
+        })
+        */
+        .build()
+
+    inline fun <reified T : Any> build(url: String = DEFAULT_URL): T {
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
             .addConverterFactory(MoshiConverterFactory.create())
             .client(okHttpClient)
             .build()
-        return retrofit
-            .create(apiType.java)
+        return retrofit.create()
     }
 
     const val RESULT_OK = "ok"
     const val RESULT_ERROR = "error"
-    const val DEFAULT_URL = "https://hoernli-6.maas:30445/"
+    const val DEFAULT_URL = "https://hoernli-6.maas:30444/"
 }

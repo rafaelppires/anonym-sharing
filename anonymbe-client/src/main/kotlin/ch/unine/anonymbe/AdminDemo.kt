@@ -5,7 +5,7 @@ import ch.unine.anonymbe.api.Api
 import ch.unine.anonymbe.api.User
 
 fun main(args: Array<String>) {
-    val service = Api.build(AdminApi::class)
+    val service = Api.build<AdminApi>()
 
     val call = service.createUser(User("toto"))
     val result = call.execute()

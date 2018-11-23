@@ -70,7 +70,11 @@ typename AnonymBE<T>::ASKYError AnonymBE<T>::process_get(
     if (command == "/access/rights") {
     } else if (command == "/verifier/certify") {
     
+    } else if (command == "/ping") {
+        // GET endpoint for Kubernetes probe
+        return ASKY_NOERROR;
     }
+
     return ASKY_BAD_REQUEST;
 }
 
@@ -140,6 +144,9 @@ typename AnonymBE<T>::ASKYError AnonymBE<T>::process_delete(
                                          json_str(j, "user_id"));
         return ASKY_NOERROR;
     } else if (command == "/access/aclmember") {
+    } else if (command == "/access/all") {
+        database_.delete_all_data();
+        return ASKY_NOERROR;
     }
     return ASKY_BAD_REQUEST;
 }
@@ -225,7 +232,7 @@ void AnonymBE<T>::set_positive_response(std::string &rep,
         j[kv.first] = kv.second;
     }
     std::string content = j.dump(2);
-    rep = posrep + std::to_string(content.size()) + eol + eol + content + eol;
+    rep = posrep + std::to_string(content.size()) + eol + eol + content;
 }
 
 //------------------------------------------------------------------------------
@@ -238,7 +245,7 @@ void AnonymBE<T>::set_negative_response(std::string &rep,
     j["detail"] = extra != "" ? extra : msg ;
     
     std::string content = j.dump(2);
-    rep = negrep + std::to_string(content.size()) + eol + eol + content + eol;
+    rep = negrep + std::to_string(content.size()) + eol + eol + content;
 }
 
 //------------------------------------------------------------------------------
