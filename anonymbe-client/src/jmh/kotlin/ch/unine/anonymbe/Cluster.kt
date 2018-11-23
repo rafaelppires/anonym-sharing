@@ -44,7 +44,7 @@ object Cluster {
         var currentReady = -1
         var tries = 0
         while (currentReady != instances && tries < 40) {
-            Thread.sleep(1000)
+            Thread.sleep(2000)
             try {
                 runKubectl("scale deployment --replicas=$instances $deploymentName")
                 val lines = runKubectl("get deployment $deploymentName -o custom-columns=ready:status.readyReplicas")

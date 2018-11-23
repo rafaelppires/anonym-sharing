@@ -42,9 +42,9 @@ spec:
           containerPort: 4444
         resources:
           requests:
-            intel.com/sgx: 5000
+            intel.com/sgx: 1
           limits:
-            intel.com/sgx: 5000
+            intel.com/sgx: 1
         readinessProbe:
           httpGet:
             path: /ping
@@ -57,5 +57,5 @@ spec:
             path: /ping
             port: service-port
             scheme: HTTPS
-          initialDelaySeconds: 20
-          periodSeconds: 10
+          initialDelaySeconds: 10
+          periodSeconds: 5
