@@ -41,16 +41,15 @@ object Cluster {
         val deploymentName = deployment.deploymentName
         println("Scaling $deploymentName to $instances replicas...")
 
-        runKubectl("scale deployment --replicas=$instances $deploymentName")
-
-        println("Waiting for scaling to happen...")
         var currentReady = -1
         var tries = 0
-        while (currentReady != instances && tries < 20) {
+        while (currentReady != instances && tries < 40) {
             Thread.sleep(1000)
             try {
+                runKubectl("scale deployment --replicas=$instances $deploymentName")
+                println("Waiting for scaling to happen...")
                 val lines = runKubectl("get deployment $deploymentName -o custom-columns=ready:status.readyReplicas")
-                val newCurrentReady = lines[1].toInt()
+                val newCurrentReady = lines[1].toIntOrNull() ?: 0
                 if (newCurrentReady != currentReady) {
                     println("$newCurrentReady instances ready")
                     currentReady = newCurrentReady
