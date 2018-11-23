@@ -56,7 +56,7 @@ object Cluster {
                     currentReady = newCurrentReady
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                println(e.message)
             }
             tries++
         }

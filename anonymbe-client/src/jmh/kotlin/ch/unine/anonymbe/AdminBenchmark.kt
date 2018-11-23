@@ -29,16 +29,22 @@ open class AdminBenchmark {
 
     @Setup(Level.Trial)
     fun setup(ts: ThreadState) {
-        service = Api.build(endpointUrl)
-        service.deleteAllData().execute().throwExceptionIfNotReallySuccessful()
-
         val scale = scaleString.toInt()
         Cluster.scaleAnonymBEService(Deployment.fromUrl(endpointUrl), scale)
-    }
 
-    @TearDown(Level.Trial)
-    fun tearDown() {
-        Api.okHttpClient.connectionPool().evictAll()
+        service = Api.build(endpointUrl)
+        var tries = 0
+        while (tries < 0 && try {
+                service.deleteAllData().execute().throwExceptionIfNotReallySuccessful()
+                false
+            } catch (e: Exception) {
+                true
+            }
+        ) {
+            tries++
+            println("Error deleting all data, waiting 1 second")
+            Thread.sleep(1000)
+        }
     }
 
     @Benchmark
