@@ -5,9 +5,7 @@ import ch.unine.anonymbe.api.Api
 import ch.unine.anonymbe.api.User
 import ch.unine.anonymbe.api.throwExceptionIfNotReallySuccessful
 import org.openjdk.jmh.annotations.*
-import org.openjdk.jmh.infra.BenchmarkParams
 import org.openjdk.jmh.infra.ThreadParams
-import retrofit2.Retrofit
 
 @State(Scope.Thread)
 open class ThreadState {
@@ -48,10 +46,5 @@ open class AdminBenchmark {
         val name = "testuser${++ts.counter}"
         val user = User(name)
         service.createUser(user).execute()
-    }
-
-    @Benchmark
-    fun addUserToGroupBenchmark() {
-
     }
 }
