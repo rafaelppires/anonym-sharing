@@ -7,3 +7,6 @@
 [submodule "anonymBE/src/sgx_common"]
 	path = anonymBE/src/sgx_common
 	url = https://gitlab.securecloud.works/rafael.pires/sgx_common.git
+[submodule "anonymBE/src/minioclient-cpp"]
+	path = anonymBE/src/minioclient-cpp
+	url = https://github.com/rafaelppires/minioclient-cpp.git

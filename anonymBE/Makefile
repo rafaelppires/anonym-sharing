@@ -20,6 +20,7 @@ OpenSSLDir= $(realpath src/SGX-OpenSSL/)
 OpenSSLSGXDir=$(OpenSSLDir)/OpenSSL_SGX/
 OSLLEnclaveW=$(OpenSSLDir)/Wrappers/Enclave
 OSLLAppW=$(OpenSSLDir)/Wrappers/App
+MinioClientDir=$(realpath src/minioclient-cpp)
 
 ExtraExec=writeproxy
 EnclaveSources:=$(SrcDir)/enclave
@@ -54,6 +55,17 @@ EnclAllObjs      := $(addprefix $(ObjDir)/, $(EnclaveName)_t.o \
                          sgx_cryptoall_t.o libc_proxy_t.o file_mock_t.o \
                          ssl_wrappers_t.o my_wrappers_t.o tls_config_t.o )
 EnclExtLibs      := $(addprefix $(OpenSSLSGXDir), libssl.a libcrypto.a )
+WriterProxyObjs  := $(addprefix $(ObjDir)/,enclave_writeproxy_u.o \
+                        sgx_initenclave_u.o sgx_utils_rp_u.o \
+                        event_loop_writeproxy_u.o sgx_errlist_u.o \
+                        my_wrappers_impl_u.o writeproxy_ocalls_u.o)
+WriterProxyEnclObjs := $(addprefix $(ObjDir)/, enclave_%_t.o ecalls_%_t.o \
+                            tls_config_t.o ssl_wrappers_t.o \
+                            my_wrappers_writeproxy_t.o libc_proxy_t.o \
+                            file_mock_t.o http1decoder_t.o httprequest_t.o\
+                            httpresponse_t.o httpheaders_t.o stringutils_t.o\
+                            httpurl_t.o minioclient_t.o datetime_t.o \
+                            inet_pton_ntop_t.o httpclient_t.o aws_signer_t.o) 
 
 ifeq ($(MEMDATABASE), 1)
     EnclAllObjs += $(addprefix $(ObjDir)/, memory_database_t.o)
@@ -77,7 +89,7 @@ endif
 
 EnclaveLFlags := $(EnclExtLibs) $(EnclaveLFlags)
 EnclCInclude     := $(addprefix -I, $(Enclave_IncDirs))
-EnclCXXInclude   := $(EnclCInclude) $(addprefix -I, $(EnclaveCXXIDirs))
+EnclCXXInclude   := $(EnclCInclude) $(addprefix -I, $(EnclaveCXXIDirs) $(MinioClientDir))
 NatvInclude      := $(addprefix -I, $(NatvIncludeDirs))
 
 ifeq ($(DEBUG), 1)
@@ -90,7 +102,7 @@ endif
 ############## UNTRUSTED #######################################################
 all: $(SysName) $(ExtraExec)
 
-$(BinDir)/writeproxy : $(BinDir)/% : $(ObjDir)/%.o $(addprefix $(ObjDir)/,enclave_writeproxy_u.o sgx_initenclave_u.o sgx_utils_rp_u.o event_loop_writeproxy_u.o sgx_errlist_u.o my_wrappers_impl_u.o writeproxy_ocalls_u.o) | $(BinDir) 
+$(BinDir)/writeproxy : $(BinDir)/% : $(ObjDir)/%.o $(WriterProxyObjs) | $(BinDir) 
 	@$(call run_and_test,$(CXX) $(Natv_CXXFlags) -o $@ $^ $(App_Link_Flags),"Link")
 
 $(BinDir)/$(SysName) : $(ObjDir)/$(SysName).o $(NatvObjs) | $(BinDir)
@@ -101,6 +113,9 @@ $(ObjDir)/writeproxy.o : $(SrcDir)/writerproxy/writeproxy.cpp | $(ObjDir)
 
 $(ObjDir)/%.o : $(SrcDir)/%.cpp | $(ObjDir)
 	@$(call run_and_test,$(CXX) $(Natv_CXXFlags) $(NatvInclude) -c -o $@ $<,"CXX")
+
+#$(ObjDir)/%.o : $(MinioClientDir)/%.cpp | $(ObjDir)
+#	@$(call run_and_test,$(CXX) -DWRITERPROXY $(Natv_CXXFlags) $(NatvInclude) -c -o $@ $<,"CXX")
 
 $(ObjDir)/%_writeproxy_u.o : $(SrcDir)/%.cpp | $(ObjDir)
 	@$(call run_and_test,$(CXX) -DWRITERPROXY $(Natv_CXXFlags) $(NatvInclude) -c -o $@ $<,"CXX")
@@ -125,7 +140,7 @@ $(BinDir)/%.signed.so : $(ObjDir)/%.so | $(BinDir)
 	$(eval EName := $(patsubst %.so, %, $(notdir $<)))
 	@$(call run_and_test,$(SGX_ENCLAVE_SIGNER) sign -enclave $< -config $(EnclaveSources)/$(EName).config.xml -out $@ -key $(EnclaveSources)/enclave-key.pem -ignore-init-sec-error > /dev/null 2>&1,"Sign SGX")
 
-$(ObjDir)/enclave_writeproxy.so : $(ObjDir)/enclave_%.so : $(addprefix $(ObjDir)/, enclave_%_t.o ecalls_%_t.o tls_config_t.o ssl_wrappers_t.o my_wrappers_writeproxy_t.o libc_proxy_t.o file_mock_t.o) | $(ObjDir)
+$(ObjDir)/enclave_writeproxy.so : $(ObjDir)/enclave_%.so : $(WriterProxyEnclObjs) | $(ObjDir)
 	@$(call run_and_test,$(CXX) $^ -o $@ $(EnclaveLFlags),"Link SGX")
 
 $(ObjDir)/$(EnclaveName).so : $(EnclAllObjs) | $(ObjDir)
@@ -141,6 +156,9 @@ $(ObjDir)/%_t.o : $(SGX_COMMONDIR)/libc_mock/%.c | $(ObjDir)
 	@$(call run_and_test,$(CC) -c $< -o $@ $(Encl_CFlags) $(EnclCInclude),"CC SGX")
 
 $(ObjDir)/%_t.o : $(SGX_COMMONDIR)/libc_mock/%.cpp | $(ObjDir)
+	@$(call run_and_test,$(CXX) -c $< -o $@ $(Encl_CXXFlags) $(EnclCXXInclude),"CXX SGX")
+
+$(ObjDir)/%_t.o : $(MinioClientDir)/%.cpp | $(ObjDir)
 	@$(call run_and_test,$(CXX) -c $< -o $@ $(Encl_CXXFlags) $(EnclCXXInclude),"CXX SGX")
 
 $(ObjDir)/%_t.o : $(EnclaveSources)/%.cpp | $(ObjDir)
