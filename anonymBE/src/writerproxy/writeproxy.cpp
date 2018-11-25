@@ -1,4 +1,4 @@
-#define N 9  // input/enclave service threads
+#define N 1  // input/enclave service threads
 #define ENCLAVENAME "enclave_writeproxy"
 #include <enclave_writeproxy_u.h>
 #include <writeproxy_args.h>

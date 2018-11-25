@@ -140,15 +140,32 @@ int tls_accept(int fd, SSL_CTX *ctx) {
         std::lock_guard<std::mutex> lock(conn_mutex);
         open_ssl_connections[fd] = cli;
     }
-    //printf("ciphersuit: %s\n", SSL_get_current_cipher(cli)->name);
+    // printf("Connection accepted fd(%d)\n", fd);
+    // printf("ciphersuit: %s\n", SSL_get_current_cipher(cli)->name);
     return 0;
 }
 
 //------------------------------------------------------------------------------
+void tls_finish() {
+    std::lock_guard<std::mutex> lock(conn_mutex);
+    for (auto &kv : open_ssl_connections) {
+        printf("removed ssl context for fd %d\n", kv.first);
+        SSL_shutdown(kv.second);
+        SSL_free(kv.second);
+        int ret;
+        ocall_close(&ret,kv.first);
+    }
+    open_ssl_connections.clear();
+}
+
+//------------------------------------------------------------------------------
+
 int ecall_tls_close(int fd) {
     std::lock_guard<std::mutex> lock(conn_mutex);
     auto it = open_ssl_connections.find(fd);
     if (it != open_ssl_connections.end()) {
+        printf("removed ssl context for fd %d\n", fd);
+        SSL_shutdown(it->second);
         SSL_free(it->second);
         open_ssl_connections.erase(it);
         return 0;
@@ -167,14 +184,14 @@ int ecall_tls_recv(int fd) {
             ret = SSL_read(ssl, read_buf, sizeof(read_buf));
             if (ret > 0) {
                 ecall_query(fd, read_buf, ret);
-                //return 0;
+                // return 0;
             } else {
                 if (ret == 0) return -1;
                 int r = SSL_get_error(ssl, r);
-                //printf(":%s:\n", err_str(r));
+                // printf(":%s:\n", err_str(r));
                 return -2;
             }
-        } while( ret > 0 );
+        } while (ret > 0);
     }
     return -3;
 }

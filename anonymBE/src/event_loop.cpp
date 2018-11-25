@@ -66,9 +66,13 @@ void SocketEventLoop::consume_fd(int fd, std::string &msg) const {
     ecall_tls_recv(g_eid, &ret, fd);
     if (ret == -1) {  // connection gracefully closed
         ecall_tls_close(g_eid, &ret, fd);
+        printf("Connection %d was closed\n", fd);
         close(fd);
     } else if (ret != 0) {
-        //printf("TLS Recv: %d\n", ret);
+        printf("TLS Recv: %s\n",
+               ret == -2 ? "Data consumed, waiting more"
+                         : (ret == -3 ? "Did not find the SSL context"
+                                      : std::to_string(ret).c_str()));
     }
     msg.clear();
 #else
@@ -146,7 +150,7 @@ void SocketEventLoop::event_loop() {
     for (;;) {
         nfds = epoll_wait(epollfd_, events, MAX_EVENTS, -1);
         if (nfds == -1) {
-            //exit_error(EXIT_FAILURE, "epoll_wait: %s\n", strerror(errno));
+            // exit_error(EXIT_FAILURE, "epoll_wait: %s\n", strerror(errno));
             printf("epoll_wait: %s\n", strerror(errno));
         }
 
@@ -182,4 +186,3 @@ void SocketEventLoop::event_loop() {
         }
     }
 }
-

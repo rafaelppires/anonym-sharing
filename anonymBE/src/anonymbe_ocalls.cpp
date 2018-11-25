@@ -5,10 +5,11 @@
 #endif
 #include <stdio.h>
 #include <sys/time.h>
+#include <pthread.h>
 
 //------------------------------------------------------------------------------
 int ocall_print_string(const char *str) {
-    return printf("\033[96m%s\033[0m", str);
+    return printf("[%lu] \033[96m%s\033[0m", pthread_self(), str);
 }
 
 //------------------------------------------------------------------------------
