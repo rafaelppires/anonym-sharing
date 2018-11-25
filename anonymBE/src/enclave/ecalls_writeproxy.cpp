@@ -1,5 +1,6 @@
 #include <enclave_writeproxy_t.h>
 #include <http1decoder.h>
+#include <httpcommon.h>
 #include <httpheaders.h>
 #include <httpresponse.h>
 #include <minioclient.h>
@@ -19,14 +20,13 @@ std::basic_ostream<char> cout;
 //------------------------------------------------------------------------------
 int ecall_init(struct Arguments args) {
     init_openssl(&ssl_context);
-    header_builder.set("User-Agent", "A-SKY WriterProxy")
-                  .set("Connection", "Keep-Alive")
-                  .set("Content-Type","application/json");
-    response_builder.protocol("HTTP/1.1").headers(header_builder);
+    header_builder.set(HttpStrings::user_agent, "A-SKY WriterProxy")
+        .set(HttpStrings::connection, HttpStrings::keepalive);
+    response_builder.protocol(HttpStrings::http11).headers(header_builder);
     minioClient =
         new MinioClient("http://127.0.0.1:9000", "IXAFVR4LKA12P2FACHT8",
                         "RJR0W75O7Y27lzdBkY8LoymxWNE2ecdB0MqRLZQY");
-    //minioClient->traceOn(cout);
+    // minioClient->traceOn(cout);
     return 0;
 }
 
@@ -37,9 +37,7 @@ void ecall_finish() {
 }
 
 //------------------------------------------------------------------------------
-int ecall_tls_accept(int fd) {
-    return tls_accept(fd, ssl_context);
-}
+int ecall_tls_accept(int fd) { return tls_accept(fd, ssl_context); }
 
 //------------------------------------------------------------------------------
 bool make_bucket(const Request &request) {
@@ -69,7 +67,7 @@ Response forward(const Request &request) {
             return response_builder.build();
         }
     } catch (const std::exception &e) {
-        printf("Error: [%s]\n", e.what());
+        //printf("Error: (%s)\n", e.what());
         std::string norep = "No response";
         if (norep == e.what()) {
             response_builder.code(444).message(norep);
@@ -81,16 +79,29 @@ Response forward(const Request &request) {
 }
 
 //------------------------------------------------------------------------------
+int requests_received = 0;
 int ecall_query(int fd, const char *buff, size_t len) {
     Request req;
     std::string input(buff, len);
+
+#if 0
+    const std::string eol = "\r\n", posrep = "HTTP/1.1 200 OK" + eol +
+                                             "Connection: Keep-Alive" + eol +
+                                             "Content-Type: application/json" +
+                                             eol + "Content-Length: 0" + eol +
+                                             eol;
+#endif
     try {
         decoder.addChunk(input);
-        if (decoder.requestReady()) {
+        while (decoder.requestReady()) {
+            ++requests_received;
+            if (requests_received % 100000 == 0)
+                printf("%luk Requests\n", requests_received / 1000);
             req = decoder.getRequest();
             std::string response = forward(req).toString();
-            // printf("Response: \n{%s}\n", response.c_str());
+            // printf("(REP{%s}REP)\n", response.c_str());
             if (tls_send(fd, response.data(), response.size()) < 0)
+                // if (tls_send(fd, posrep.data(), posrep.size()) < 0)
                 printf("not sent\n");
         }
     } catch (const std::exception &e) {

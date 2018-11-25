@@ -65,7 +65,8 @@ WriterProxyEnclObjs := $(addprefix $(ObjDir)/, enclave_%_t.o ecalls_%_t.o \
                             file_mock_t.o http1decoder_t.o httprequest_t.o\
                             httpresponse_t.o httpheaders_t.o stringutils_t.o\
                             httpurl_t.o minioclient_t.o datetime_t.o \
-                            inet_pton_ntop_t.o httpclient_t.o aws_signer_t.o) 
+                            inet_pton_ntop_t.o httpclient_t.o aws_signer_t.o\
+                            httpcommon_t.o) 
 
 ifeq ($(MEMDATABASE), 1)
     EnclAllObjs += $(addprefix $(ObjDir)/, memory_database_t.o)
