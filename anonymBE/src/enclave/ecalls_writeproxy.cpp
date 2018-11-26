@@ -19,13 +19,20 @@ ResponseBuilder response_builder;
 std::basic_ostream<char> cout;
 //------------------------------------------------------------------------------
 int ecall_init(struct Arguments args) {
+    if (strlen(args.minioendpoint) == 0 || strlen(args.minioaccesskey) ||
+        strlen(args.miniosecret)) {
+        printf(
+            "All minio parameters are mandatory: -m <host:port> -a <ACCESSKEY> "
+            "-k <SECRETKEY>\n");
+        return -1;
+    }
+
     init_openssl(&ssl_context);
     header_builder.set(HttpStrings::user_agent, "A-SKY WriterProxy")
         .set(HttpStrings::connection, HttpStrings::keepalive);
     response_builder.protocol(HttpStrings::http11).headers(header_builder);
-    minioClient =
-        new MinioClient("http://127.0.0.1:9000", "IXAFVR4LKA12P2FACHT8",
-                        "RJR0W75O7Y27lzdBkY8LoymxWNE2ecdB0MqRLZQY");
+    minioClient = new MinioClient("http://" + std::string(args.minioendpoint),
+                                  args.minioaccesskey, args.miniosecret);
     // minioClient->traceOn(cout);
     return 0;
 }
@@ -67,7 +74,7 @@ Response forward(const Request &request) {
             return response_builder.build();
         }
     } catch (const std::exception &e) {
-        //printf("Error: (%s)\n", e.what());
+        // printf("Error: (%s)\n", e.what());
         std::string norep = "No response";
         if (norep == e.what()) {
             response_builder.code(444).message(norep);
@@ -76,6 +83,18 @@ Response forward(const Request &request) {
     }
     response_builder.code(200).message("OK");
     return response_builder.build();
+}
+
+//------------------------------------------------------------------------------
+Response treat_request(const Request &request) {
+    if (request.method() == "GET") {
+        const HttpUrl &url = request.url();
+        if (url.encodedPath() == "/ping")
+            return response_builder.code(200).message("OK").build();
+    } else if (request.method() == "PUT") {
+        return forward(request);
+    }
+    return response_builder.code(400).message("Bad Request").build();
 }
 
 //------------------------------------------------------------------------------
@@ -98,7 +117,7 @@ int ecall_query(int fd, const char *buff, size_t len) {
             if (requests_received % 100000 == 0)
                 printf("%luk Requests\n", requests_received / 1000);
             req = decoder.getRequest();
-            std::string response = forward(req).toString();
+            std::string response = treat_request(req).toString();
             // printf("(REP{%s}REP)\n", response.c_str());
             if (tls_send(fd, response.data(), response.size()) < 0)
                 // if (tls_send(fd, posrep.data(), posrep.size()) < 0)
