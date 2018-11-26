@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: writerproxy-service
+  labels:
+    name: writerproxy
+spec:
+  type: NodePort
+  ports:
+  - port: 4445
+    targetPort: 4445
+    nodePort: 30555
+  selector:
+    role: writerproxy
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: writerproxy
+spec:
+  selector:
+    matchLabels:
+      role: writerproxy
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        role: writerproxy
+    spec:
+      terminationGracePeriodSeconds: 10
+      imagePullSecrets:
+      - name: regcred
+      containers:
+      - name: writerproxy-container
+        image: sebvaucher/anonymbe:0.19-writerproxy
+        args:
+        - "./bin/writeproxy"
+        - "-m"
+        - "minio-service.default.svc.cluster.local:9000"
+        - "-a"
+        - "access"
+        - "-k"
+        - "secretkey"
+        stdin: true
+        tty: true
+        ports:
+        - name: service-port
+          containerPort: 4445
+        resources:
+          requests:
+            intel.com/sgx: 1
+          limits:
+            intel.com/sgx: 1
+        readinessProbe:
+          httpGet:
+            path: /ping
+            port: service-port
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 3
+        livenessProbe:
+          httpGet:
+            path: /ping
+            port: service-port
+            scheme: HTTPS
+          initialDelaySeconds: 10
+          periodSeconds: 5
+
