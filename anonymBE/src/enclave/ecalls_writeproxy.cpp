@@ -19,8 +19,8 @@ ResponseBuilder response_builder;
 std::basic_ostream<char> cout;
 //------------------------------------------------------------------------------
 int ecall_init(struct Arguments args) {
-    if (strlen(args.minioendpoint) == 0 || strlen(args.minioaccesskey) ||
-        strlen(args.miniosecret)) {
+    if (strlen(args.minioendpoint) == 0 || strlen(args.minioaccesskey) == 0 ||
+        strlen(args.miniosecret) == 0) {
         printf(
             "All minio parameters are mandatory: -m <host:port> -a <ACCESSKEY> "
             "-k <SECRETKEY>\n");
