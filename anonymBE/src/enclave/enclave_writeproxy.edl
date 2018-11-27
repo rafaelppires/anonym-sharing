@@ -28,7 +28,7 @@ enclave {
         uint16_t ocall_ntohs(uint16_t netshort);
         int ocall_bind(int socket, [in, size=address_len] const struct sockaddr *address, socklen_t address_len) propagate_errno;
         int ocall_shutdown(int socket, int how) propagate_errno;
-        int ocall_connect(int socket, [in,size=address_len] const struct sockaddr *address, socklen_t address_len) propagate_errno;
+        int ocall_connect(int socket, [user_check] const struct sockaddr *address, socklen_t address_len) propagate_errno;
         int ocall_listen(int socket, int backlog) propagate_errno;
         int ocall_socket(int domain, int type, int protocol) propagate_errno;
         ssize_t ocall_recv(int socket, [out, size=length] void *buffer, size_t length, int flags) propagate_errno;
