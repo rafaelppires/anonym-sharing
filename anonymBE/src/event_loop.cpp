@@ -66,13 +66,14 @@ void SocketEventLoop::consume_fd(int fd, std::string &msg) const {
     ecall_tls_recv(g_eid, &ret, fd);
     if (ret == -1) {  // connection gracefully closed
         ecall_tls_close(g_eid, &ret, fd);
-        printf("Connection %d was closed\n", fd);
         close(fd);
     } else if (ret != -2) {
+        /*
         printf("TLS Recv: %s\n",
                ret == -2 ? "Data consumed, waiting more"
                          : (ret == -3 ? "Did not find the SSL context"
                                       : std::to_string(ret).c_str()));
+        //*/
     }
     msg.clear();
 #else

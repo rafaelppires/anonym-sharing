@@ -149,7 +149,6 @@ int tls_accept(int fd, SSL_CTX *ctx) {
 void tls_finish() {
     std::lock_guard<std::mutex> lock(conn_mutex);
     for (auto &kv : open_ssl_connections) {
-        printf("removed ssl context for fd %d\n", kv.first);
         SSL_shutdown(kv.second);
         SSL_free(kv.second);
         int ret;
@@ -164,7 +163,6 @@ int ecall_tls_close(int fd) {
     std::lock_guard<std::mutex> lock(conn_mutex);
     auto it = open_ssl_connections.find(fd);
     if (it != open_ssl_connections.end()) {
-        printf("removed ssl context for fd %d\n", fd);
         SSL_shutdown(it->second);
         SSL_free(it->second);
         open_ssl_connections.erase(it);
