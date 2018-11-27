@@ -66,9 +66,9 @@ class UserResult(
 }
 
 @Throws(Exception::class)
-fun <T : Result> Response<T>.throwExceptionIfNotSuccessful() {
+fun <T> Response<T>.throwExceptionIfNotSuccessful() {
     if (!isSuccessful) {
-        throw Exception("Unsuccessful API call. ${errorBody()?.string()}")
+        throw Exception("Unsuccessful API call. HTTP code ${code()}. ${errorBody()?.string()}")
     }
 }
 
@@ -80,7 +80,7 @@ fun <T : Result> Response<T>.throwExceptionIfNotReallySuccessful() {
         errorBody()?.string()
     }
     if (!isReallySuccessful) {
-        throw Exception("Unsuccessful API call. HTTP ${code()}. Body: $body")
+        throw Exception("Unsuccessful API call. HTTP code ${code()}. Body: $body")
     }
 }
 

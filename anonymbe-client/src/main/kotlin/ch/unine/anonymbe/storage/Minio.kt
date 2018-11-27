@@ -3,7 +3,7 @@ package ch.unine.anonymbe.storage
 import io.minio.MinioClient
 import java.io.InputStream
 
-class Minio(
+open class Minio(
     endpoint: String = DEFAULT_ENDPOINT, port: Int = DEFAULT_PORT,
     accessKey: String = DEFAULT_ACCESS_KEY, secretKey: String = DEFAULT_SECRET_KEY
 ) : StorageApi {
@@ -41,7 +41,7 @@ class Minio(
         client.getObject(bucketName, objectName)
 
     companion object {
-        const val DEFAULT_ENDPOINT = "https://hoernli-5.maas"
+        const val DEFAULT_ENDPOINT = "http://hoernli-5.maas"
         const val DEFAULT_PORT = 30900
         const val DEFAULT_ACCESS_KEY = "access"
         const val DEFAULT_SECRET_KEY = "secretkey"

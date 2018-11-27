@@ -3,20 +3,17 @@ package ch.unine.anonymbe.api
 import okhttp3.ConnectionPool
 import okhttp3.ConnectionSpec
 import okhttp3.OkHttpClient
+import okhttp3.RequestBody
 import retrofit2.Call
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import retrofit2.create
-import retrofit2.http.Body
-import retrofit2.http.DELETE
-import retrofit2.http.POST
-import retrofit2.http.PUT
+import retrofit2.http.*
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLContext
 import javax.net.ssl.X509TrustManager
-import kotlin.reflect.KClass
 
 interface AdminApi {
     @POST("access/user")
@@ -38,6 +35,12 @@ interface AdminApi {
 interface UserApi {
     @POST("verifier/envelope")
     fun getEnvelope(@Body bucket: Bucket): Call<EnvelopeResult>
+}
+
+interface WriterProxyApi {
+    @PUT("{bucket}/{filename}")
+    @Headers("Content-Type: application/octet-stream")
+    fun uploadFile(@Path("bucket") bucketName: String, @Path("filename") filename: String, @Body data: RequestBody): Call<Unit>
 }
 
 object Api {
@@ -64,14 +67,12 @@ object Api {
         */
         .build()
 
-    inline fun <reified T : Any> build(url: String = DEFAULT_URL): T {
-        val retrofit = Retrofit.Builder()
-            .baseUrl(url)
-            .addConverterFactory(MoshiConverterFactory.create())
-            .client(okHttpClient)
-            .build()
-        return retrofit.create()
-    }
+    inline fun <reified T : Any> build(url: String = DEFAULT_URL): T = Retrofit.Builder()
+        .baseUrl(url)
+        .addConverterFactory(MoshiConverterFactory.create())
+        .client(okHttpClient)
+        .build()
+        .create()
 
     const val RESULT_OK = "ok"
     const val RESULT_ERROR = "error"

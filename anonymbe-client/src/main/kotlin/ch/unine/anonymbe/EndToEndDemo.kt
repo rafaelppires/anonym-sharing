@@ -5,7 +5,7 @@ import ch.unine.anonymbe.api.Api
 import ch.unine.anonymbe.api.User
 import ch.unine.anonymbe.api.UserGroup
 import ch.unine.anonymbe.client.Client
-import ch.unine.anonymbe.storage.Minio
+import ch.unine.anonymbe.storage.WriterProxy
 import java.util.*
 import kotlin.random.Random
 
@@ -22,8 +22,9 @@ fun endToEndDemo(dummyData: ByteArray): ByteArray {
     val userId = UUID.randomUUID().toString()
     val groupId = UUID.randomUUID().toString()
     val filename = "testFileDemo"
+    println("userId = $userId, groupId = $groupId, filename = $filename")
 
-    val storageClient = Minio()
+    val storageClient = WriterProxy()
 
     val adminApi = Api.build<AdminApi>()
 
