@@ -35,8 +35,7 @@ int ecall_init(struct Arguments args) {
     }
 
     init_openssl(&ssl_context);
-    header_builder.set(HttpStrings::user_agent, "A-SKY WriterProxy")
-        .set(HttpStrings::connection, HttpStrings::keepalive);
+    header_builder .set(HttpStrings::connection, HttpStrings::keepalive);
     response_builder.protocol(HttpStrings::http11).headers(header_builder);
     try {
         minioClient =
@@ -112,6 +111,7 @@ Response treat_request(const Request &request) {
 
 //------------------------------------------------------------------------------
 int ecall_tls_close(int fd) {
+    //printf("Closed file [%d]\n", fd);
     decoder_table.erase(fd);
     tlsserver_close(fd);
 }
@@ -132,6 +132,7 @@ int ecall_query(int fd, const char *buff, size_t len) {
     Http1Decoder &decoder = decoder_table[fd];
 
     try {
+        //printf(" File %d - %lu !!((%s))!!!\n",fd, requests_received, input.c_str());
         decoder.addChunk(input);
         while (decoder.requestReady()) {
             ++requests_received;
