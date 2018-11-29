@@ -27,13 +27,25 @@ int ecall_init(struct Arguments args) {
         return -1;
     }
 
+    std::string endpoint(args.minioendpoint);
+    if (endpoint.find("http") == 0) {
+        printf("Minio endpoint must be specified as <host>:<port>\n");
+        return -2;
+    }
+
     init_openssl(&ssl_context);
     header_builder.set(HttpStrings::user_agent, "A-SKY WriterProxy")
         .set(HttpStrings::connection, HttpStrings::keepalive);
     response_builder.protocol(HttpStrings::http11).headers(header_builder);
-    minioClient = new MinioClient("http://" + std::string(args.minioendpoint),
-                                  args.minioaccesskey, args.miniosecret);
-    // minioClient->traceOn(cout);
+    try {
+        minioClient =
+            new MinioClient("https://" + endpoint,
+                            args.minioaccesskey, args.miniosecret);
+        // minioClient->traceOn(cout);
+    } catch (const std::exception &e) {
+        printf("%s\n", e.what());
+        exit(1);
+    }
     return 0;
 }
 
