@@ -159,7 +159,7 @@ void tls_finish() {
 
 //------------------------------------------------------------------------------
 
-int ecall_tls_close(int fd) {
+int tlsserver_close(int fd) {
     std::lock_guard<std::mutex> lock(conn_mutex);
     auto it = open_ssl_connections.find(fd);
     if (it != open_ssl_connections.end()) {

@@ -12,11 +12,12 @@ extern "C" {
 extern int printf(const char *fmt, ...);
 }
 SSL_CTX *ssl_context;
-Http1Decoder decoder;
 MinioClient *minioClient = nullptr;
 HeadersBuilder header_builder;
 ResponseBuilder response_builder;
 std::basic_ostream<char> cout;
+
+std::map<int, Http1Decoder> decoder_table;
 //------------------------------------------------------------------------------
 int ecall_init(struct Arguments args) {
     if (strlen(args.minioendpoint) == 0 || strlen(args.minioaccesskey) == 0 ||
@@ -110,6 +111,12 @@ Response treat_request(const Request &request) {
 }
 
 //------------------------------------------------------------------------------
+int ecall_tls_close(int fd) {
+    decoder_table.erase(fd);
+    tlsserver_close(fd);
+}
+
+//------------------------------------------------------------------------------
 int requests_received = 0;
 int ecall_query(int fd, const char *buff, size_t len) {
     Request req;
@@ -122,6 +129,8 @@ int ecall_query(int fd, const char *buff, size_t len) {
                                              eol + "Content-Length: 0" + eol +
                                              eol;
 #endif
+    Http1Decoder &decoder = decoder_table[fd];
+
     try {
         decoder.addChunk(input);
         while (decoder.requestReady()) {

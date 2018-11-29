@@ -9,4 +9,6 @@ int tls_accept(int fd, SSL_CTX *ctx);
 int tls_send(int fd, const char *buff, size_t len);
 void tls_finish();
 
+int tlsserver_close(int fd);
+
 #endif

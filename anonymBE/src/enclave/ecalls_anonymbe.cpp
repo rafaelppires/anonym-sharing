@@ -83,5 +83,8 @@ int ecall_init(struct Arguments args) {
 int ecall_tls_accept(int fd) { return anonymbe.accept(fd);}
 
 //------------------------------------------------------------------------------
+int ecall_tls_close(int fd) { return tlsserver_close(fd);}
+
+//------------------------------------------------------------------------------
 void ecall_finish() { anonymbe.finish(); }
 
