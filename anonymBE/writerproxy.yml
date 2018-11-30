@@ -22,6 +22,7 @@ spec:
     matchLabels:
       role: writerproxy
   replicas: 1
+  revisionHistoryLimit: 1
   template:
     metadata:
       labels:
@@ -32,7 +33,7 @@ spec:
       - name: regcred
       containers:
       - name: writerproxy-container
-        image: sebvaucher/anonymbe:0.19-writerproxy
+        image: sebvaucher/anonymbe:0.26-writerproxy
         args:
         - "./bin/writeproxy"
         - "-m"
