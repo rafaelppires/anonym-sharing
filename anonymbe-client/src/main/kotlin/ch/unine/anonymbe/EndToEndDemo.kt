@@ -13,18 +13,18 @@ fun main(args: Array<String>) {
     endToEndDemo(Random.nextBytes(512))
 }
 
+const val groupId = "endtoend"
+val storageClient = WriterProxy()
+
 /**
  * Do an end-to-end demonstration of the full system.
  * @param dummyData Data to send to the Cloud
  * @return If all goes well, the same dummyData after it has done a round trip to the Cloud storage.
  */
-fun endToEndDemo(dummyData: ByteArray): ByteArray {
+fun endToEndDemo(dummyData: ByteArray): ByteArray = try {
     val userId = UUID.randomUUID().toString()
-    val groupId = UUID.randomUUID().toString()
     val filename = "testFileDemo"
     println("userId = $userId, groupId = $groupId, filename = $filename")
-
-    val storageClient = WriterProxy()
 
     val adminApi = Api.build<AdminApi>()
 
@@ -68,5 +68,7 @@ fun endToEndDemo(dummyData: ByteArray): ByteArray {
     println("Original data: ${b64Encoder.encodeToString(dummyData)}")
     println("Retrieved data: ${b64Encoder.encodeToString(retrievedData)}")
 
-    return retrievedData
+    retrievedData
+} finally {
+    storageClient.deleteBucket(groupId)
 }

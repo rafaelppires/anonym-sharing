@@ -20,6 +20,11 @@ jmh {
 
     timeOnIteration = "10s"
     iterations = 1
+
+    include = listOf(
+        //"AdminBenchmark",
+        "WriterProxyBenchmark"
+    )
 }
 
 repositories {
@@ -40,6 +45,12 @@ dependencies {
         compile(it)
         jmh(it)
     }
+    /*
+    "com.squareup.okhttp3:logging-interceptor:3.12.0".also {
+        compile(it)
+        jmh(it)
+    }
+    */
     compile("com.squareup.moshi:moshi:1.7.0")
 
     testCompile("org.jetbrains.kotlin:kotlin-test-junit:1.3.10")

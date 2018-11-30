@@ -9,12 +9,11 @@ import java.io.InputStream
 
 class WriterProxy(
     writerProxyUrl: String = DEFAULT_URL,
-    minioEndpoint: String = Minio.DEFAULT_ENDPOINT,
-    minioPort: Int = Minio.DEFAULT_PORT,
+    minioUrl: String = Minio.DEFAULT_ENDPOINT,
     accessKey: String = Minio.DEFAULT_ACCESS_KEY,
     secretKey: String = Minio.DEFAULT_SECRET_KEY
 ) :
-    Minio(minioEndpoint, minioPort, accessKey, secretKey) {
+    Minio(minioUrl, accessKey, secretKey) {
     private val api: WriterProxyApi = Api.build(writerProxyUrl)
 
     override fun createBucketIfNotExists(bucketName: String) {

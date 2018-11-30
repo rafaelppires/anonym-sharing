@@ -1,13 +1,15 @@
 package ch.unine.anonymbe.storage
 
 import io.minio.MinioClient
+import org.xmlpull.v1.XmlPullParserException
 import java.io.InputStream
 
 open class Minio(
-    endpoint: String = DEFAULT_ENDPOINT, port: Int = DEFAULT_PORT,
-    accessKey: String = DEFAULT_ACCESS_KEY, secretKey: String = DEFAULT_SECRET_KEY
+    endpoint: String = DEFAULT_ENDPOINT,
+    accessKey: String = DEFAULT_ACCESS_KEY,
+    secretKey: String = DEFAULT_SECRET_KEY
 ) : StorageApi {
-    private val client = MinioClient(endpoint, port, accessKey, secretKey).also {
+    private val client = MinioClient(endpoint, accessKey, secretKey).also {
         it.ignoreCertCheck()
     }
 
@@ -31,6 +33,38 @@ open class Minio(
         }
     }
 
+    override fun deleteBucket(bucketName: String) {
+        var attemptsLeft = 20
+
+        while (attemptsLeft --> 0) {
+            try {
+                val objects = client.listObjects(bucketName)
+                    .map { it.get().objectName() }
+                if (objects.isEmpty()) {
+                    break
+                }
+
+                objects.asIterable()
+                    .let {
+                        client.removeObject(bucketName, it)
+                    }.joinToString { it.get().message() }
+                    .run {
+                        if (isNotEmpty()) {
+                            throw RuntimeException(this)
+                        }
+                    }
+            } catch (e: XmlPullParserException) {
+                println(e.message)
+            }
+        }
+
+        try {
+            client.removeBucket(bucketName)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     override fun storeObject(
         bucketName: String, objectName: String,
         data: InputStream, dataLength: Long,
@@ -41,8 +75,7 @@ open class Minio(
         client.getObject(bucketName, objectName)
 
     companion object {
-        const val DEFAULT_ENDPOINT = "http://hoernli-5.maas"
-        const val DEFAULT_PORT = 30900
+        const val DEFAULT_ENDPOINT = "https://hoernli-5.maas:30900"
         const val DEFAULT_ACCESS_KEY = "access"
         const val DEFAULT_SECRET_KEY = "secretkey"
     }

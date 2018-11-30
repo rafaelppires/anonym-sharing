@@ -5,6 +5,8 @@ import java.io.InputStream
 interface StorageApi {
     fun createBucketIfNotExists(bucketName: String)
 
+    fun deleteBucket(bucketName: String)
+
     fun storeObject(
         bucketName: String, objectName: String,
         data: InputStream, dataLength: Long = data.available().toLong(),

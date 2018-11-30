@@ -8,7 +8,7 @@ import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.ThreadParams
 
 @State(Scope.Thread)
-open class ThreadState {
+open class CounterThreadState {
     var counter = 0
 
     @Setup(Level.Trial)
@@ -23,14 +23,13 @@ open class AdminBenchmark {
     private var endpointUrl: String = ""
 
     @Param("1", "2")
-    private var scaleString: String = ""
+    private var scale: String = ""
 
     private lateinit var service: AdminApi
 
     @Setup(Level.Trial)
-    fun setup(ts: ThreadState) {
-        val scale = scaleString.toInt()
-        Cluster.scaleAnonymBEService(Deployment.fromUrl(endpointUrl), scale)
+    fun setup(ts: CounterThreadState) {
+        Cluster.scaleService(Deployment.fromUrl(endpointUrl), scale.toInt())
 
         service = Api.build(endpointUrl)
         var tries = 0
@@ -48,7 +47,7 @@ open class AdminBenchmark {
     }
 
     @Benchmark
-    fun addUserBenchmark(ts: ThreadState) {
+    fun addUserBenchmark(ts: CounterThreadState) {
         val name = "testuser${++ts.counter}"
         val user = User(name)
         service.createUser(user).execute()
