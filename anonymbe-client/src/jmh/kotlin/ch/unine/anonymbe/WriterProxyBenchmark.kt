@@ -9,7 +9,7 @@ import kotlin.random.Random
 
 @State(Scope.Benchmark)
 open class WriterProxyBenchmark {
-    @Param("true")//, "false")
+    @Param("true", "false")
     private var isThroughProxyString: String = ""
 
     @Param("10000")
@@ -31,11 +31,11 @@ open class WriterProxyBenchmark {
         service = when (isThroughProxyString) {
             "true" -> {
                 Cluster.scaleService(Deployment.WRITERPROXY, scale.toInt())
-                WriterProxy(writerProxyUrl = Deployments.WRITERPROXY_URL, minioUrl = Deployments.MINIO_URL)
+                WriterProxy(Minio(Deployments.MINIO_URL), Deployments.WRITERPROXY_URL)
             }
             "false" -> {
                 Cluster.scaleService(Deployment.WRITERPROXY, 0)
-                Minio(endpoint = Deployments.MINIO_URL)
+                Minio(Deployments.MINIO_URL)
             }
             else -> throw IllegalArgumentException()
         }
@@ -44,7 +44,7 @@ open class WriterProxyBenchmark {
         data = Base64.getEncoder().encode(Random.nextBytes(dataSizeBytes.toInt()))
     }
 
-    @TearDown
+    @TearDown(Level.Trial)
     fun tearDown() {
         println("Number of errors: $errors")
 

@@ -10,7 +10,7 @@ object Deployments {
     const val ANONYMBE_MONGO_URL = "https://hoernli-4.maas:30444/"
     const val ANONYMBE_MEM_URL = "https://hoernli-4.maas:30445/"
     const val WRITERPROXY_URL = "https://hoernli-4.maas:30555/"
-    const val MINIO_URL = "http://hoernli-4.maas:30900/"
+    const val MINIO_URL = "https://hoernli-5.maas:30900/"
 }
 
 enum class Deployment(val deploymentName: String, val apiUrl: String) {

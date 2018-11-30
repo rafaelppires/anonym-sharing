@@ -7,17 +7,15 @@ import okhttp3.MediaType
 import okhttp3.RequestBody
 import java.io.InputStream
 
-class WriterProxy(
-    writerProxyUrl: String = DEFAULT_URL,
-    minioUrl: String = Minio.DEFAULT_ENDPOINT,
-    accessKey: String = Minio.DEFAULT_ACCESS_KEY,
-    secretKey: String = Minio.DEFAULT_SECRET_KEY
-) :
-    Minio(minioUrl, accessKey, secretKey) {
-    private val api: WriterProxyApi = Api.build(writerProxyUrl)
+class WriterProxy(private val storageApi: StorageApi, writerProxyUrl: String = DEFAULT_URL) : StorageApi {
+    private val writerProxy: WriterProxyApi = Api.build(writerProxyUrl)
+
+    override fun deleteBucket(bucketName: String) = storageApi.deleteBucket(bucketName)
+
+    override fun getObject(bucketName: String, objectName: String) = storageApi.getObject(bucketName, objectName)
 
     override fun createBucketIfNotExists(bucketName: String) {
-        // Nothing
+        // Handled by writer proxy when calling storeObject
     }
 
     override fun storeObject(
@@ -30,10 +28,10 @@ class WriterProxy(
         val dataBytes = data.readNBytes(dataLength.toInt())
         val requestBody = RequestBody.create(MediaType.get(mime), dataBytes)
 
-        api.uploadFile(bucketName, objectName, requestBody).execute().throwExceptionIfNotSuccessful()
+        writerProxy.uploadFile(bucketName, objectName, requestBody).execute().throwExceptionIfNotSuccessful()
     }
 
     companion object {
-        const val DEFAULT_URL = "https://hoernli-5.maas:30555"
+        const val DEFAULT_URL = "https://hoernli-4.maas:30555"
     }
 }

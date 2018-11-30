@@ -4,7 +4,7 @@ import io.minio.MinioClient
 import org.xmlpull.v1.XmlPullParserException
 import java.io.InputStream
 
-open class Minio(
+class Minio(
     endpoint: String = DEFAULT_ENDPOINT,
     accessKey: String = DEFAULT_ACCESS_KEY,
     secretKey: String = DEFAULT_SECRET_KEY
@@ -34,6 +34,10 @@ open class Minio(
     }
 
     override fun deleteBucket(bucketName: String) {
+        if (!client.bucketExists(bucketName)) {
+            return
+        }
+
         var attemptsLeft = 20
 
         while (attemptsLeft --> 0) {

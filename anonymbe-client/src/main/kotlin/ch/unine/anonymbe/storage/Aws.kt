@@ -2,63 +2,94 @@ package ch.unine.anonymbe.storage
 
 import software.amazon.awssdk.auth.credentials.AwsCredentials
 import software.amazon.awssdk.core.sync.RequestBody
+import software.amazon.awssdk.http.SdkHttpConfigurationOption
+import software.amazon.awssdk.http.apache.ApacheHttpClient
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3Client
 import software.amazon.awssdk.services.s3.model.BucketAlreadyOwnedByYouException
+import software.amazon.awssdk.services.s3.model.NoSuchBucketException
+import software.amazon.awssdk.utils.AttributeMap
+import java.io.InputStream
 import java.net.URI
 
-object Aws {
-    private const val ENDPOINT = "http://hoernli-5.maas:30900"
-    private const val BUCKET = "awsbucket2"
-    private const val FILEPATH = "testfile.txt"
+class Aws(
+    endpointUrl: String = DEFAULT_ENDPOINT,
+    accessKey: String = DEFAULT_ACCESS_KEY,
+    secretKey: String = DEFAULT_SECRET_KEY
+) : StorageApi {
+    private val httpClient = ApacheHttpClient.builder()
+        .buildWithDefaults(
+            AttributeMap.builder()
+                .put(SdkHttpConfigurationOption.TRUST_ALL_CERTIFICATES, true).build()
+        )
+    private val client: S3Client = S3Client.builder()
+        .endpointOverride(URI.create(endpointUrl))
+        .region(Region.US_EAST_1)
+        .serviceConfiguration { it.pathStyleAccessEnabled(true) }
+        .httpClient(httpClient)
+        .credentialsProvider {
+            object : AwsCredentials {
+                override fun accessKeyId(): String = accessKey
 
-    @JvmStatic
-    fun main(args: Array<String>) {
-        val client = S3Client.builder()
-            .endpointOverride(URI.create(ENDPOINT))
-            .region(Region.US_EAST_1)
-            .serviceConfiguration { it.pathStyleAccessEnabled(true) }
-            .credentialsProvider {
-                object : AwsCredentials {
-                    override fun accessKeyId(): String = "access"
-
-                    override fun secretAccessKey(): String = "secretkey"
-                }
+                override fun secretAccessKey(): String = secretKey
             }
-            .build()
+        }
+        .build()
 
+    override fun createBucketIfNotExists(bucketName: String) {
         try {
             client.createBucket {
-                it.bucket(BUCKET)
+                it.bucket(bucketName)
             }
-        } catch (_: BucketAlreadyOwnedByYouException) {}
+        } catch (_: BucketAlreadyOwnedByYouException) {
+        }
+    }
 
-        /* Does not work... Access denied.
-        client.putBucketPolicy {
-            it.bucket(BUCKET)
-            it.policy(
-                "{\n" +
-                "  \"Version\":\"2012-10-17\",\n" +
-                "  \"Statement\":[\n" +
-                "    {\n" +
-                "      \"Sid\":\"AddPerm\",\n" +
-                "      \"Effect\":\"Allow\",\n" +
-                "      \"Principal\": \"*\",\n" +
-                "      \"Action\":[\"s3:GetObject\"],\n" +
-                "      \"Resource\":[\"arn:aws:s3:::$BUCKET/*\"]\n" +
-                "    }\n" +
-                "  ]\n" +
-                "}"
-            )
-        }*/*/ // Needs double comment ending for some reason.
+    override fun deleteBucket(bucketName: String) {
+        try {
+            client.listObjects {
+                it.bucket(bucketName)
+            }.contents().map {
+                it.key()
+            }.forEach { objectKey ->
+                client.deleteObject {
+                    it.bucket(bucketName)
+                    it.key(objectKey)
+                }
+            }
 
+            client.deleteBucket {
+                it.bucket(bucketName)
+            }
+        } catch (_: NoSuchBucketException) {
+        }
+    }
+
+    override fun storeObject(
+        bucketName: String,
+        objectName: String,
+        data: InputStream,
+        dataLength: Long,
+        mime: String
+    ) {
         client.putObject(
             {
-                it.bucket(BUCKET)
-                it.contentType("text/plain")
-                it.key(FILEPATH)
+                it.bucket(bucketName)
+                it.contentType(mime)
+                it.key(objectName)
             },
-            RequestBody.fromBytes("Hello AWS\n".toByteArray())
+            RequestBody.fromInputStream(data, dataLength)
         )
+    }
+
+    override fun getObject(bucketName: String, objectName: String): InputStream = client.getObject {
+        it.bucket(bucketName)
+        it.key(objectName)
+    }
+
+    companion object {
+        const val DEFAULT_ENDPOINT = "https://hoernli-5.maas:30900"
+        const val DEFAULT_ACCESS_KEY = "access"
+        const val DEFAULT_SECRET_KEY = "secretkey"
     }
 }

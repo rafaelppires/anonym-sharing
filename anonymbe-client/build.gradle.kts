@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    id("com.github.johnrengelman.shadow") version "4.0.2"
+    id("com.github.johnrengelman.shadow") version "4.0.3"
     kotlin("jvm") version "1.3.10"
     id("org.jetbrains.kotlin.kapt") version "1.3.10"
     id("me.champeau.gradle.jmh") version "0.4.7"
@@ -36,7 +36,11 @@ dependencies {
 
     kapt("com.squareup.moshi:moshi-kotlin-codegen:1.7.0")
 
-    compile("software.amazon.awssdk:s3:2.0.0-preview-12")
+    compile("software.amazon.awssdk:s3:2.1.3")
+    compile("software.amazon.awssdk:apache-client:2.1.3")
+    compile("org.apache.logging.log4j:log4j-core:2.11.1")
+    compile("org.apache.logging.log4j:log4j-api:2.11.1")
+    compile("org.apache.logging.log4j:log4j-slf4j-impl:2.11.1")
     compile("io.minio:minio:5.0.2")
 
     compile("com.squareup.retrofit2:retrofit:2.5.0")
@@ -54,6 +58,8 @@ dependencies {
     compile("com.squareup.moshi:moshi:1.7.0")
 
     testCompile("org.jetbrains.kotlin:kotlin-test-junit:1.3.10")
+
+    jmhCompile("org.openjdk.jmh:jmh-core:1.21")
 }
 
 tasks.withType<KotlinCompile> {
