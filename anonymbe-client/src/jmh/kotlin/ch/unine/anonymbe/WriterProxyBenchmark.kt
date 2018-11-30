@@ -40,14 +40,20 @@ open class WriterProxyBenchmark {
             else -> throw IllegalArgumentException()
         }
         println("Bucket = $bucket")
-        service.createBucketIfNotExists(bucket)
+
         data = Base64.getEncoder().encode(Random.nextBytes(dataSizeBytes.toInt()))
     }
 
-    @TearDown(Level.Trial)
+    @Setup(Level.Iteration)
+    fun iterationSetup() {
+        service.createBucketIfNotExists(bucket)
+    }
+
+    @TearDown(Level.Iteration)
     fun tearDown() {
         println("Number of errors: $errors")
 
+        println("")
         service.deleteBucket(bucket)
     }
 
