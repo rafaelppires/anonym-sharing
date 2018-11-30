@@ -113,7 +113,7 @@ Response treat_request(const Request &request) {
 int ecall_tls_close(int fd) {
     //printf("Closed file [%d]\n", fd);
     decoder_table.erase(fd);
-    tlsserver_close(fd);
+    return tlsserver_close(fd);
 }
 
 //------------------------------------------------------------------------------
@@ -135,8 +135,7 @@ int ecall_query(int fd, const char *buff, size_t len) {
         //printf(" File %d - %lu !!((%s))!!!\n",fd, requests_received, input.c_str());
         decoder.addChunk(input);
         while (decoder.requestReady()) {
-            ++requests_received;
-            if (requests_received % 100000 == 0)
+            if (++requests_received % 100000 == 0)
                 printf("%luk Requests\n", requests_received / 1000);
             req = decoder.getRequest();
             std::string response = treat_request(req).toString();

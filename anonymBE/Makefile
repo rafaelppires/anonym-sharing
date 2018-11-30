@@ -51,9 +51,12 @@ NatvObjs         := $(addprefix $(ObjDir)/, $(EnclaveName)_u.o event_loop.o \
                          sgx_initenclave_u.o sgx_errlist_u.o \
                          my_wrappers_impl_u.o )
 EnclAllObjs      := $(addprefix $(ObjDir)/, $(EnclaveName)_t.o \
-                         ecalls_$(SysName)_t.o \
+                         httpcommon_t.o ecalls_$(SysName)_t.o \
                          sgx_cryptoall_t.o libc_proxy_t.o file_mock_t.o \
-                         ssl_wrappers_t.o my_wrappers_t.o tls_config_t.o )
+                         ssl_wrappers_t.o my_wrappers_t.o tls_config_t.o \
+                         httpresponse_t.o httprequest_t.o http1decoder_t.o \
+                         httpheaders_t.o httpurl_t.o \
+                         stringutils_t.o)
 EnclExtLibs      := $(addprefix $(OpenSSLSGXDir), libssl.a libcrypto.a )
 WriterProxyObjs  := $(addprefix $(ObjDir)/,enclave_writeproxy_u.o \
                         sgx_initenclave_u.o sgx_utils_rp_u.o \
@@ -70,6 +73,7 @@ WriterProxyEnclObjs := $(addprefix $(ObjDir)/, enclave_%_t.o ecalls_%_t.o \
 
 ifeq ($(MEMDATABASE), 1)
     EnclAllObjs += $(addprefix $(ObjDir)/, memory_database_t.o)
+    EnclaveCXXIDirs += $(MONGO_TRUSTDIR)
 #    EnclExtLibs := $(addprefix $(MONGO_TRUSTDIR)/lib/, libssl.a libcrypto.a)
 else
     EnclaveCXXIDirs += $(MONGO_TRUSTDIR) \

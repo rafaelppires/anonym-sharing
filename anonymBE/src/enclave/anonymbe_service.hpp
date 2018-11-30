@@ -10,19 +10,28 @@
 #define KEY_SIZE 32
 
 #define json_str(var, field) ((var).at(field).get<std::string>())
-//------------------------------------------------------------------------------
+
 template <typename T>
-const std::string AnonymBE<T>::eol = "\r\n";
+const Response AnonymBE<T>::posrep =
+    ResponseBuilder()
+        .protocol(HttpStrings::http11)
+        .code(200)
+        .message("OK")
+        .headers(HeadersBuilder()
+                     .set(HttpStrings::connection, HttpStrings::keepalive)
+                     .set(HttpStrings::contenttype, "application/json"))
+        .build();
+
 template <typename T>
-const std::string AnonymBE<T>::posrep =
-    "HTTP/1.1 200 OK" + eol + "Connection: Keep-Alive" + eol +
-    "Content-Type: application/json" + eol + "Content-Length: ";
-template <typename T>
-const std::string AnonymBE<T>::negrep =
-    "HTTP/1.1 400 Bad Request" + eol + "Connection: Keep-Alive" + eol +
-    "Content-Type: application/json" + eol + "Content-Length: ";
-template <typename T>
-const std::string AnonymBE<T>::magic = "\xCA\xFE\x41MCS";
+const Response AnonymBE<T>::negrep =
+    ResponseBuilder()
+        .protocol(HttpStrings::http11)
+        .code(400)
+        .message("Bad Request")
+        .headers(HeadersBuilder()
+                     .set(HttpStrings::connection, HttpStrings::keepalive)
+                     .set(HttpStrings::contenttype, "application/json"))
+        .build();
 
 //------------------------------------------------------------------------------
 template <typename T>
@@ -34,42 +43,15 @@ AnonymBE<T>::AnonymBE()
 }
 
 //------------------------------------------------------------------------------
-template <typename T>
-bool AnonymBE<T>::http_parse(const std::string &input, std::string &verb,
-                             std::string &command, std::string &content) {
-    size_t pos;
-    if (input.find("HTTP/") != std::string::npos) {
-        if ((pos = input.find(' ')) != std::string::npos) {
-            verb = input.substr(0, pos);
-            size_t pos1;
-            ++pos;
-            if ((pos1 = input.find(' ', pos)) != std::string::npos) {
-                command = input.substr(pos, pos1 - pos);
-                ++pos1;
-                if ((pos = input.find("\n\n")) != std::string::npos) {
-                    content = input.substr(pos + 2);
-                    return true;
-                } else if ((pos = input.find("\r\n\r\n")) !=
-                           std::string::npos) {
-                    content = input.substr(pos + 4);
-                    return true;
-                }
-            }
-        }
-    }
-    return false;
-}
-
-//------------------------------------------------------------------------------
 using json = nlohmann::json;
 //------------------------------------------------------------------------------
 template <typename T>
-typename AnonymBE<T>::ASKYError AnonymBE<T>::process_get(
-    const std::string &command, const std::string &content,
-    KVString &response) {
+typename AnonymBE<T>::ASKYError AnonymBE<T>::process_get(const Request &request,
+                                                         KVString &response) {
+    const HttpUrl &url = request.url();
+    std::string command = url.encodedPath();
     if (command == "/access/rights") {
     } else if (command == "/verifier/certify") {
-    
     } else if (command == "/ping") {
         // GET endpoint for Kubernetes probe
         return ASKY_NOERROR;
@@ -81,9 +63,11 @@ typename AnonymBE<T>::ASKYError AnonymBE<T>::process_get(
 //------------------------------------------------------------------------------
 template <typename T>
 typename AnonymBE<T>::ASKYError AnonymBE<T>::process_put(
-    const std::string &command, const std::string &content) {
+    const Request &request) {
+    const HttpUrl &url = request.url();
+    std::string command = url.encodedPath();
     if (command == "/access/usergroup") {
-        auto j = json::parse(content);
+        auto j = json::parse(request.stringBody());
         database_.add_user_to_group(json_str(j, "group_name"),
                                     json_str(j, "user_id"));
         return ASKY_NOERROR;
@@ -96,8 +80,10 @@ typename AnonymBE<T>::ASKYError AnonymBE<T>::process_put(
 //------------------------------------------------------------------------------
 template <typename T>
 typename AnonymBE<T>::ASKYError AnonymBE<T>::process_post(
-   const std::string &command, const std::string &content, KVString &response) {
-    auto j = json::parse(content);
+    const Request &request, KVString &response) {
+    auto j = json::parse(request.stringBody());
+    const HttpUrl &url = request.url();
+    std::string command = url.encodedPath();
     if (command == "/access/user") {
         unsigned char rnd[KEY_SIZE];
         sgx_read_rand(rnd, sizeof(rnd));
@@ -112,10 +98,9 @@ typename AnonymBE<T>::ASKYError AnonymBE<T>::process_post(
         return ASKY_NOERROR;
     } else if (command == "/verifier/envelope") {
         std::string ctext;
-        std::string bucket_key = Crypto::b64_decode(json_str(j,"bucket_key"));
-        bucket_key.resize(32,0);
-        KeyArray ka =
-            database_.get_keys_of_group(json_str(j,"group_id"));
+        std::string bucket_key = Crypto::b64_decode(json_str(j, "bucket_key"));
+        bucket_key.resize(32, 0);
+        KeyArray ka = database_.get_keys_of_group(json_str(j, "group_id"));
         for (const auto &k : ka) {
             std::string key((const char *)k.data(), KEY_SIZE);
             ctext += Crypto::encrypt_aesgcm(key, bucket_key);
@@ -123,8 +108,8 @@ typename AnonymBE<T>::ASKYError AnonymBE<T>::process_post(
         response["ciphertext"] = Crypto::b64_encode(ctext);
         return ASKY_NOERROR;
     } else if (command == "/verifier/usergroup") {
-        bool answer = database_.is_user_part_of_group( json_str(j, "user_id"), 
-                                                    json_str(j, "group_name"));
+        bool answer = database_.is_user_part_of_group(
+            json_str(j, "user_id"), json_str(j, "group_name"));
         response["belongs"] = answer ? "true" : "false";
         return ASKY_NOERROR;
     } else if (command == "/access/acl") {
@@ -137,9 +122,11 @@ typename AnonymBE<T>::ASKYError AnonymBE<T>::process_post(
 //------------------------------------------------------------------------------
 template <typename T>
 typename AnonymBE<T>::ASKYError AnonymBE<T>::process_delete(
-    const std::string &command, const std::string &content) {
+    const Request &request) {
+    const HttpUrl &url = request.url();
+    std::string command = url.encodedPath();
     if (command == "/access/usergroup") {
-        auto j = json::parse(content);
+        auto j = json::parse(request.stringBody());
         database_.remove_user_from_group(json_str(j, "group_name"),
                                          json_str(j, "user_id"));
         return ASKY_NOERROR;
@@ -153,63 +140,61 @@ typename AnonymBE<T>::ASKYError AnonymBE<T>::process_delete(
 
 //------------------------------------------------------------------------------
 template <typename T>
-void AnonymBE<T>::process_input( const std::string &input, std::string &rep ) {
+Response AnonymBE<T>::process_input(const Request &request) {
     if (!init_) {
 #ifdef MEMDATABASE
         init_ = true;
 #else
-        printf("Attempt to do some processing before initializing\n"); 
+        printf("Attempt to do some processing before initializing\n");
         return;
 #endif
-    } 
+    }
 
     std::string verb, command, content, extra;
     bool post, put, get;
     ASKYError error = ASKY_NOERROR;
     KVString response;
-    if (http_parse(input, verb, command, content)) {
-        try {
-            if (verb == "GET") {
-                error = process_get(command, content, response);
-            } else if (verb == "PUT") {
-                error = process_put(command, content);
-            } else if (verb == "POST") {
-                error = process_post(command, content, response);
-            } else if (verb == "DELETE") {
-                error = process_delete(command, content);
-            }
-
-            if (error == ASKY_BAD_REQUEST) {
-                extra = "Unknown command '" + command + "'";
-            }
-        } catch (nlohmann::detail::out_of_range &e) {
-            extra = e.what();
-            error = ASKY_BAD_REQUEST;
-        } catch (std::invalid_argument &e) {
-            extra = e.what();
-            error = ASKY_BAD_REQUEST;
-        } catch (std::logic_error &e) {  // warning, not error
-            response["info"] = e.what();
-        } catch (uint32_t e) {
-            extra = mongo_error(e);
-            error = ASKY_UNKNOWN;
-        } catch (...) {
-            error = ASKY_UNKNOWN;
+    try {
+        if (request.method() == "GET") {
+            error = process_get(request, response);
+        } else if (request.method() == "PUT") {
+            error = process_put(request);
+        } else if (request.method() == "POST") {
+            error = process_post(request, response);
+        } else if (request.method() == "DELETE") {
+            error = process_delete(request);
         }
-    } else {
-        extra = "Error parsing HTML";
+
+        if (error == ASKY_BAD_REQUEST) {
+            extra = "Unknown command '" + command + "'";
+        }
+    } catch (nlohmann::detail::out_of_range &e) {
+        extra = e.what();
         error = ASKY_BAD_REQUEST;
+    } catch (std::invalid_argument &e) {
+        extra = e.what();
+        error = ASKY_BAD_REQUEST;
+    } catch (std::logic_error &e) {  // warning, not error
+        response["info"] = e.what();
+    } catch (uint32_t e) {
+        extra = mongo_error(e);
+        error = ASKY_UNKNOWN;
+    } catch (const std::exception &e) {
+        printf("Error: %s\n", e.what());
+    } catch (...) {
+        error = ASKY_UNKNOWN;
     }
 
     try {
         if (error == ASKY_NOERROR) {
-            set_positive_response(rep, response);
+            return positive_response(response);
         } else {
-            set_negative_response(rep, err_amcs(error), extra);
+            return negative_response(err_amcs(error), extra);
         }
-    } catch(nlohmann::detail::exception &e) {
+    } catch (nlohmann::detail::exception &e) {
         printf("Err: %s\n", e.what());
     }
+    return Response();
 }
 //------------------------------------------------------------------------------
 template <typename T>
@@ -224,28 +209,25 @@ std::string AnonymBE<T>::mongo_error(uint32_t e) {
 
 //------------------------------------------------------------------------------
 template <typename T>
-void AnonymBE<T>::set_positive_response(std::string &rep,
-                                        const KVString &response) {
+Response AnonymBE<T>::positive_response(const KVString &response) {
     json j;
     j["result"] = "ok";
     for (auto &kv : response) {
         j[kv.first] = kv.second;
     }
-    std::string content = j.dump(2);
-    rep = posrep + std::to_string(content.size()) + eol + eol + content;
+
+    return ResponseBuilder(posrep).appendBody(j.dump(2)).build();
 }
 
 //------------------------------------------------------------------------------
 template <typename T>
-void AnonymBE<T>::set_negative_response(std::string &rep,
-                                        const std::string &msg,
+Response AnonymBE<T>::negative_response(const std::string &msg,
                                         const std::string &extra) {
     json j;
     j["result"] = "error";
-    j["detail"] = extra != "" ? extra : msg ;
-    
-    std::string content = j.dump(2);
-    rep = negrep + std::to_string(content.size()) + eol + eol + content;
+    j["detail"] = extra != "" ? extra : msg;
+
+    return ResponseBuilder(negrep).appendBody(j.dump(2)).build();
 }
 
 //------------------------------------------------------------------------------
@@ -256,12 +238,12 @@ int AnonymBE<T>::input_file(const std::string &data) {}
 template <typename T>
 int AnonymBE<T>::init(Arguments *args) {
 #ifdef TLS_REQUESTS
-    init_openssl( &ctx_ );
+    init_openssl(&ctx_);
 #endif
     try {
         database_.init(args->mongo);
         init_ = true;
-    } catch(uint32_t e) {
+    } catch (uint32_t e) {
         printf("Error: %lu\n", e);
         return -1;
     }
@@ -272,7 +254,7 @@ int AnonymBE<T>::init(Arguments *args) {
 template <typename T>
 int AnonymBE<T>::accept(int fd) {
 #ifdef TLS_REQUESTS
-    return tls_accept( fd, ctx_ );
+    return tls_accept(fd, ctx_);
 #endif
 }
 
