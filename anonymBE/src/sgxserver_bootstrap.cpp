@@ -57,6 +57,8 @@ void ctrlc_handler(int s) {
 
 //------------------------------------------------------------------------------
 int main(int argc, char** argv) {
+    signal(SIGPIPE,SIG_IGN);
+
     Arguments args; 
     init_args(&args);
     struct argp argp = { options, parse_opt, 0, doc };

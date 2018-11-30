@@ -168,7 +168,7 @@ void SocketEventLoop::event_loop() {
                 int ret;
                 ecall_tls_accept(g_eid, &ret, conn_sock);
                 if (ret) {
-                    printf("SSL accept failure\n");
+                    printf("SSL accept failure. fd: %d\n", conn_sock);
                     close(conn_sock);
                     continue;
                 }

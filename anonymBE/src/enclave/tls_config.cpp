@@ -132,7 +132,7 @@ int tls_accept(int fd, SSL_CTX *ctx) {
     if (r <= 0) {
         SSL_free(cli);
         r = SSL_get_error(cli, r);
-        printf("%s: %s\n", err_str(r),
+        printf("fd: %d %s: %s\n", fd, err_str(r),
                ERR_error_string(ERR_get_error(), nullptr));
         return -1;
     }
