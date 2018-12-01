@@ -1,9 +1,12 @@
 #define N 1  // input/enclave service threads
 #define ENCLAVENAME "enclave_writeproxy"
 #include <argp.h>
+#ifndef NATIVE
 #include <enclave_writeproxy_u.h>
+#endif
 #include <writeproxy_args.h>
 #include <string>
+#include <cstring>
 
 const char *argp_program_version = "A-SKY Writer proxy";
 const char *argp_program_bug_address = "<rafael.pires@unine.ch>";

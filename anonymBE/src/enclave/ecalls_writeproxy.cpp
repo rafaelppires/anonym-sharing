@@ -1,4 +1,6 @@
+#ifndef NATIVE
 #include <enclave_writeproxy_t.h>
+#endif
 #include <http1decoder.h>
 #include <httpcommon.h>
 #include <httpheaders.h>
@@ -15,7 +17,9 @@ SSL_CTX *ssl_context;
 MinioClient *minioClient = nullptr;
 HeadersBuilder header_builder;
 ResponseBuilder response_builder;
+#ifndef NATIVE
 std::basic_ostream<char> cout;
+#endif
 
 std::map<int, Http1Decoder> decoder_table;
 //------------------------------------------------------------------------------
@@ -68,7 +72,7 @@ bool make_bucket(const Request &request) {
     try {
         minioClient->makeBucket(bucket);
     } catch (const std::exception &e) {
-        printf("Error creating bucket: %d\n", e.what());
+        printf("Error creating bucket: %s\n", e.what());
         return false;
     }
     return true;
@@ -117,7 +121,7 @@ int ecall_tls_close(int fd) {
 }
 
 //------------------------------------------------------------------------------
-int requests_received = 0;
+long unsigned requests_received = 0;
 int ecall_query(int fd, const char *buff, size_t len) {
     Request req;
     std::string input(buff, len);

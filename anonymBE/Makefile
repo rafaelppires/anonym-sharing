@@ -117,7 +117,15 @@ $(SysName) $(ExtraExec) : % : $(BinDir)/%
                     obj/file_mock_u.o obj/ssl_wrappers_u.o obj/my_wrappers_u.o,\
                     $(EnclAllObjs))
     NatvObjs+=$(EnclAllObjs)
+    WriterProxyObjs:=$(filter-out obj/enclave_writeproxy_u.o \
+            obj/sgx_initenclave_u.o obj/sgx_errlist_u.o \
+            obj/my_wrappers_impl_u.o, $(WriterProxyObjs))
     WriterProxyEnclObjs:=$(WriterProxyEnclObjs:%_t.o=%_u.o)
+    WriterProxyEnclObjs:=$(filter-out obj/libc_proxy_u.o \
+                    obj/my_wrappers_writeproxy_u.o obj/file_mock_u.o \
+                    obj/inet_pton_ntop_u.o obj/ssl_wrappers_u.o \
+                    obj/enclave_%_u.o, $(WriterProxyEnclObjs))
+    WriterProxyObjs+=$(WriterProxyEnclObjs)
     NatvInclude+=$(EnclCXXInclude)
     NatvInclude:=$(sort $(NatvInclude))
     NatvInclude:=$(filter-out -I/opt/intel/sgxsdk/include \
@@ -166,6 +174,7 @@ $(ObjDir)/%_u.o : $(SGX_COMMONDIR)/%.cpp | $(ObjDir)
 	@$(call run_and_test,$(CXX) $(Natv_CXXFlags) $(NatvInclude) -c -o $@ $<,"CXX")
 
 $(EnclaveSources)/%_u.c : $(EnclaveSources)/%.edl $(SGX_EDGER8R)
+	@echo $(WriterProxyObjs)
 	@$(call run_and_test,cd $(dir $@) && $(SGX_EDGER8R) --untrusted ./$(notdir $<) $(addprefix --search-path ,. $(EDLSearchPaths)),"Edger SGX")
 
 $(ObjDir)/%_u.o : $(EnclaveSources)/%_u.c | $(ObjDir)
