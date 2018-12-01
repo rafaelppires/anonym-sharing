@@ -3,7 +3,12 @@
 #include <openssl/x509.h>
 #include <map>
 #include <mutex>
+#ifdef NATIVE
+#include <ecalls_anonymbe.h>
+#include <unistd.h>
+#else
 #include <enclave_anonymbe_t.h>
+#endif
 
 #ifdef printf
 #undef printf
@@ -152,7 +157,11 @@ void tls_finish() {
         SSL_shutdown(kv.second);
         SSL_free(kv.second);
         int ret;
+#ifdef NATIVE
+        close(kv.first);
+#else
         ocall_close(&ret,kv.first);
+#endif
     }
     open_ssl_connections.clear();
 }

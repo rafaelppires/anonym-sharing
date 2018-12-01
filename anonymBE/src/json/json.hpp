@@ -9402,7 +9402,9 @@ char* to_chars(char* first, char* last, FloatType value)
 // #include <nlohmann/detail/output/output_adapters.hpp>
 
 // #include <nlohmann/detail/value_t.hpp>
+#ifndef NATIVE
 #include <libc_mock/libcpp_mock.h>
+#endif
 
 namespace nlohmann
 {

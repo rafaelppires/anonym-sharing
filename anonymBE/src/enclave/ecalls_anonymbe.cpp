@@ -1,5 +1,7 @@
 #include <anonymbe_service.h>
+#ifndef NATIVE
 #include <enclave_anonymbe_t.h>
+#endif
 #include <http1decoder.h>
 #include <sgx_cryptoall.h>
 #include <stdio.h>
@@ -16,7 +18,7 @@ AnonymBE<MongoDatabase> anonymbe;
 std::mutex table_lock;
 std::map<int, Http1Decoder> decoder_table;
 //------------------------------------------------------------------------------
-int requests_received = 0;
+long unsigned  requests_received = 0;
 int ecall_query(int fd, const char *buff, size_t len) {
     try {
         std::string input(buff, len), response;

@@ -1,9 +1,11 @@
 #include <anonymbe_service.h>
 #include <database.h>
+#ifndef NATIVE
 #include <enclave_anonymbe_t.h>
 #include <libc_mock/libcpp_mock.h>
-#include <sgx_cryptoall.h>
 #include <sgx_trts.h>
+#endif
+#include <sgx_cryptoall.h>
 #include <stdio.h>
 #include <json/json.hpp>
 
@@ -37,9 +39,11 @@ const Response AnonymBE<T>::negrep =
 template <typename T>
 AnonymBE<T>::AnonymBE()
     : /*database_(true),*/ init_(false), error_(ASKY_NOERROR), die_(false) {
+#ifndef NATIVE
     update_mutex_ = SGX_THREAD_MUTEX_INITIALIZER;
     goahead_condition_ = end_condition_ = update_condition_ =
         SGX_THREAD_COND_INITIALIZER;
+#endif
 }
 
 //------------------------------------------------------------------------------
@@ -86,7 +90,12 @@ typename AnonymBE<T>::ASKYError AnonymBE<T>::process_post(
     std::string command = url.encodedPath();
     if (command == "/access/user") {
         unsigned char rnd[KEY_SIZE];
+#ifdef NATIVE
+        for(int i = 0; i < sizeof(rnd); i += sizeof(int)) 
+            *(int *)&rnd[i] = rand();
+#else
         sgx_read_rand(rnd, sizeof(rnd));
+#endif
         std::string key = std::string((const char *)rnd, sizeof(rnd));
         database_.create_user(json_str(j, "user_id"), key);
         // if( key == "" ) return ASKY_CREATE_EXISTENT;
@@ -146,7 +155,7 @@ Response AnonymBE<T>::process_input(const Request &request) {
         init_ = true;
 #else
         printf("Attempt to do some processing before initializing\n");
-        return;
+        return Response();
 #endif
     }
 
@@ -244,7 +253,7 @@ int AnonymBE<T>::init(Arguments *args) {
         database_.init(args->mongo);
         init_ = true;
     } catch (uint32_t e) {
-        printf("Error: %lu\n", e);
+        printf("Error: %u\n", e);
         return -1;
     }
     return 0;
@@ -265,13 +274,20 @@ void AnonymBE<T>::finish() {}
 //------------------------------------------------------------------------------
 template <typename T>
 bool AnonymBE<T>::printmsg_onerror(int ret, const char *msg) {
-    if (ret != SGX_SUCCESS) printf("%s: %s\n", msg, err_msg(ret));
+#ifdef NATIVE
+    return ret == 0;
+#else
+    if (ret != SGX_SUCCESS) printf("%s: %s\n", msg, sgx_errmsg(ret));
     return ret == SGX_SUCCESS;
+#endif
 }
 
 //------------------------------------------------------------------------------
 template <typename T>
-std::string AnonymBE<T>::err_msg(int v) {
+std::string AnonymBE<T>::sgx_errmsg(int v) {
+#ifdef NATIVE
+    return "";
+#else
     switch (v) {
         case SGX_ERROR_AE_SESSION_INVALID:
             return "Session is not created or has been closed "
@@ -281,6 +297,7 @@ std::string AnonymBE<T>::err_msg(int v) {
         default:
             return "Unknown error code (" + std::to_string(v) + ")";
     };
+#endif
 }
 
 //------------------------------------------------------------------------------

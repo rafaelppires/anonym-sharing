@@ -4,8 +4,10 @@
 #include <httprequest.h>
 #include <httpresponse.h>
 #include <anonymbe_args.h>
+#ifndef NATIVE
 #include <sgx_tae_service.h>
 #include <sgx_thread.h>
+#endif
 #include <map>
 #include <string>
 #ifdef TLS_REQUESTS
@@ -47,7 +49,7 @@ class AnonymBE {
     ASKYError process_delete(const Request &);
 
     std::string mongo_error(uint32_t);
-    std::string err_msg(int);
+    std::string sgx_errmsg(int);
     std::string err_amcs(ASKYError e);
     bool printmsg_onerror(int ret, const char *msg);
     static const Response posrep, negrep;
@@ -61,9 +63,11 @@ class AnonymBE {
     // database
     Database database_;
 
+#ifndef NATIVE
     // synchronization stuff
     sgx_thread_cond_t update_condition_, goahead_condition_, end_condition_;
     sgx_thread_mutex_t update_mutex_;
+#endif
 };
 
 extern "C" {

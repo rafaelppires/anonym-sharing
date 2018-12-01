@@ -10,15 +10,20 @@
 #include <streambuf>
 #include <thread>
 
+#ifdef NATIVE
+#include <ecalls_anonymbe.h>
+#else
 #include <sgx_initenclave.h>
+#endif
 #include <sgx_utils_rp.h>
-
 #include <event_loop.h>
 
 #define ENCLAVEFILE ENCLAVENAME ".signed.so"
 #define TOKENFILE   ENCLAVENAME ".token"
 
+#ifndef NATIVE
 sgx_enclave_id_t g_eid;
+#endif
 
 std::condition_variable iqcv, oqcv;
 std::mutex iqmutex, oqmutex;
@@ -42,7 +47,11 @@ void enclave_thread(int id, const SocketEventLoop& comm) {
 
         if (!msg.empty()) {
             int ret;
+#ifdef NATIVE
+            ret = ecall_query(fd, msg.c_str(), msg.size());
+#else
             ecall_query(g_eid, &ret, fd, msg.c_str(), msg.size());
+#endif
         }
     }
 }
@@ -50,8 +59,12 @@ void enclave_thread(int id, const SocketEventLoop& comm) {
 //------------------------------------------------------------------------------
 void ctrlc_handler(int s) {
     printf("\033[0m\n(%d) bye!\n", s);
+#ifdef NATIVE
+    ecall_finish();
+#else
     ecall_finish(g_eid);
     destroy_enclave(g_eid);
+#endif
     exit(0);
 }
 
@@ -67,13 +80,19 @@ int main(int argc, char** argv) {
     /* Changing dir to where the executable is.*/
     change_dir(argv[0]);
 
+#ifndef NATIVE
     // Sets up enclave and initializes remote_attestation
     if (initialize_enclave(g_eid, ENCLAVEFILE, TOKENFILE)) {
         return 1;
     }
+#endif
 
     int ret;
+#ifdef NATIVE
+    ret = ecall_init(args);
+#else
     ecall_init(g_eid, &ret, args);
+#endif
     if (ret) return 2;
 
     SocketEventLoop communication(iqueue, iqmutex, iqcv);

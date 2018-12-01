@@ -1,8 +1,12 @@
+#ifdef NATIVE
+#include <ecalls_anonymbe.h>
+#else
 #ifdef WRITERPROXY
 #include <enclave_writeproxy_u.h>
 #else
 #include <enclave_anonymbe_u.h>
-#endif
+#endif // WRITEPROXY
+#endif // NATIVE
 #include <arpa/inet.h>
 #include <event_loop.h>
 #include <fcntl.h>
@@ -13,7 +17,9 @@
 #include <unistd.h>
 #include <cstring>
 
+#ifndef NATIVE
 extern sgx_enclave_id_t g_eid;
+#endif
 const std::string SocketEventLoop::eof = "\033EOF\033";
 //------------------------------------------------------------------------------
 void SocketEventLoop::set_listener(const std::string &host,
@@ -63,9 +69,17 @@ void SocketEventLoop::connect(int &fd) {
 void SocketEventLoop::consume_fd(int fd, std::string &msg) const {
 #ifdef TLS_REQUESTS
     int ret;
+#ifdef NATIVE
+    ret = ecall_tls_recv(fd);
+#else
     ecall_tls_recv(g_eid, &ret, fd);
+#endif
     if (ret == -1) {  // connection gracefully closed
+#ifdef NATIVE
+        ret = ecall_tls_close(fd);
+#else
         ecall_tls_close(g_eid, &ret, fd);
+#endif
         close(fd);
     } else if (ret != -2) {
         /*
@@ -166,7 +180,11 @@ void SocketEventLoop::event_loop() {
                 }
 #ifdef TLS_REQUESTS
                 int ret;
+#ifdef NATIVE
+                ret = ecall_tls_accept(conn_sock);
+#else
                 ecall_tls_accept(g_eid, &ret, conn_sock);
+#endif
                 if (ret) {
                     printf("SSL accept failure. fd: %d\n", conn_sock);
                     close(conn_sock);

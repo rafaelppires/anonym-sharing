@@ -1,8 +1,12 @@
+#ifdef NATIVE
+#include <unistd.h>
+#else
 #ifdef WRITERPROXY
 #include <enclave_writeproxy_u.h>
 #else
 #include <enclave_anonymbe_u.h>
-#endif
+#endif // WRITEPROXY
+#endif // NATIVE
 #include <stdio.h>
 #include <sys/time.h>
 #include <pthread.h>

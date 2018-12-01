@@ -31,8 +31,12 @@ SharedCompFlags += -DTLS_REQUESTS
 SharedEnclFlags := -DENCLAVED -DSGX_OPENSSL
 ifeq ($(MEMDATABASE), 1)
     SharedEnclFlags += -DMEMDATABASE
+    SharedCompFlags += -DMEMDATABASE
 else
     SharedEnclFlags += -DABEMONGO
+endif
+ifeq ($(NATIVE), 1)
+    SharedCompFlags += -DNATIVE -DSGX_OPENSSL
 endif
 
 include Makefile.sgx
@@ -104,6 +108,33 @@ ifeq ($(DEBUG), 1)
     Natv_CFlags   += -g
 endif
 
+ifeq ($(NATIVE), 1)
+$(SysName) $(ExtraExec) : % : $(BinDir)/%
+    NatvObjs:=$(filter-out obj/enclave_anonymbe_u.o obj/sgx_initenclave_u.o \
+                obj/sgx_errlist_u.o obj/my_wrappers_impl_u.o, $(NatvObjs))
+    EnclAllObjs:=$(EnclAllObjs:%_t.o=%_u.o)
+    EnclAllObjs:=$(filter-out obj/enclave_anonymbe_u.o obj/libc_proxy_u.o \
+                    obj/file_mock_u.o obj/ssl_wrappers_u.o obj/my_wrappers_u.o,\
+                    $(EnclAllObjs))
+    NatvObjs+=$(EnclAllObjs)
+    WriterProxyEnclObjs:=$(WriterProxyEnclObjs:%_t.o=%_u.o)
+    NatvInclude+=$(EnclCXXInclude)
+    NatvInclude:=$(sort $(NatvInclude))
+    NatvInclude:=$(filter-out -I/opt/intel/sgxsdk/include \
+                    -I/opt/intel/sgxsdk/include/tlibc\
+                    -I/opt/intel/sgxsdk/include/libcxx\
+                    -I$(SGX_COMMONDIR)/enclave_include\
+                    -I$(OpenSSLDir)/OpenSSL_SGX/include\
+                    -Isrc/mongo-sgx-client/trusted ,$(NatvInclude))
+    App_Link_Flags+=-lssl -lcrypto
+    App_Link_Flags:=$(filter-out -lsgx_uae_service -lsgx_urts, \
+                        $(App_Link_Flags))
+else
+$(SysName) $(ExtraExec) : % : $(BinDir)/% $(BinDir)/enclave_%.signed.so
+$(ObjDir)/$(SysName).o : $(ObjDir)/$(EnclaveName)_u.o
+$(ObjDir)/writeproxy.o : $(EnclaveSources)/enclave_writeproxy_u.c
+endif
+
 ############## UNTRUSTED #######################################################
 all: $(SysName) $(ExtraExec)
 
@@ -119,8 +150,11 @@ $(ObjDir)/writeproxy.o : $(SrcDir)/writerproxy/writeproxy.cpp | $(ObjDir)
 $(ObjDir)/%.o : $(SrcDir)/%.cpp | $(ObjDir)
 	@$(call run_and_test,$(CXX) $(Natv_CXXFlags) $(NatvInclude) -c -o $@ $<,"CXX")
 
-#$(ObjDir)/%.o : $(MinioClientDir)/%.cpp | $(ObjDir)
-#	@$(call run_and_test,$(CXX) -DWRITERPROXY $(Natv_CXXFlags) $(NatvInclude) -c -o $@ $<,"CXX")
+$(ObjDir)/%_u.o : $(EnclaveSources)/%.cpp | $(ObjDir)
+	@$(call run_and_test,$(CXX) $(Natv_CXXFlags) $(NatvInclude) -c -o $@ $<,"CXX")
+
+$(ObjDir)/%_u.o : $(MinioClientDir)/%.cpp | $(ObjDir)
+	@$(call run_and_test,$(CXX) -DWRITERPROXY $(Natv_CXXFlags) $(NatvInclude) -c -o $@ $<,"CXX")
 
 $(ObjDir)/%_writeproxy_u.o : $(SrcDir)/%.cpp | $(ObjDir)
 	@$(call run_and_test,$(CXX) -DWRITERPROXY $(Natv_CXXFlags) $(NatvInclude) -c -o $@ $<,"CXX")
@@ -197,13 +231,10 @@ $(OpenSSLSGXDir)/include :
 
 .PHONY: clean all $(SysName) $(ExtraExec)
 
-$(SysName) $(ExtraExec) : % : $(BinDir)/% $(BinDir)/enclave_%.signed.so
 
 clean:
 	@bash -c "rm -rf $(EnclaveSources)/*_{t,u}.{c,h} $(BinDir) $(ObjDir) $(EnclaveSources)/Ocall_wrappers.{cpp,h} $(SrcDir)/Ocall_implements.{cpp,h}"
 
-$(ObjDir)/$(SysName).o : $(ObjDir)/$(EnclaveName)_u.o
-$(ObjDir)/writeproxy.o : $(EnclaveSources)/enclave_writeproxy_u.c
 $(ObjDir)/ecalls_writeproxy_t.o : $(EnclaveSources)/enclave_writeproxy_t.c
 $(ObjDir)/tls_config_t.o : $(EnclaveSources)/enclave_anonymbe_t.c
 $(ObjDir)/ecalls_anonymbe_t.o : $(OpenSSLSGXDir)/include

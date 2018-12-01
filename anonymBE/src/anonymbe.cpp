@@ -1,8 +1,11 @@
 #define N 1  // input/enclave service threads
 #define ENCLAVENAME "enclave_anonymbe"
+#ifndef NATIVE
 #include <enclave_anonymbe_u.h>
+#endif
 #include <anonymbe_args.h>
 #include <argp.h>
+#include <cstring>
 #include <string>
 
 const char *argp_program_version = "A-SKY Key Manager";

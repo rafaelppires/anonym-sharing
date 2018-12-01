@@ -2,6 +2,7 @@
 #define _ANONYMBE_ARGS_H_
 
 #ifdef __cplusplus
+#include <cstddef>
 extern "C" {
 #endif
 struct Arguments {

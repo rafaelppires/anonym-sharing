@@ -1,7 +1,9 @@
 #ifndef _TLS_CONFIG_H_DEFINED_
 #define _TLS_CONFIG_H_DEFINED_
 
+#ifndef NATIVE
 #include <libc_mock/libc_proxy.h>
+#endif
 #include <openssl/ssl.h>
 
 void init_openssl(SSL_CTX **ctx);

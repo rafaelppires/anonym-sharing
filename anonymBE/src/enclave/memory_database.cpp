@@ -1,4 +1,5 @@
 #include <memory_database.h>
+#include <string.h>
 
 //------------------------------------------------------------------------------
 void MemDatabase::add_user_to_group(const std::string &gname,
