@@ -33,6 +33,7 @@ DataQueue oqueue;
 
 //------------------------------------------------------------------------------
 void enclave_thread(int id, const SocketEventLoop& comm) {
+    signal(SIGPIPE,SIG_IGN);
     for (;;) {
         int fd = -1;
         {  // sleeps until there is data
@@ -45,6 +46,7 @@ void enclave_thread(int id, const SocketEventLoop& comm) {
         std::string msg;
         comm.consume_fd(fd, msg);
 
+#ifndef TLS_REQUESTS
         if (!msg.empty()) {
             int ret;
 #ifdef NATIVE
@@ -53,7 +55,13 @@ void enclave_thread(int id, const SocketEventLoop& comm) {
             ecall_query(g_eid, &ret, fd, msg.c_str(), msg.size());
 #endif
         }
+#endif
     }
+}
+
+//------------------------------------------------------------------------------
+void sigpipe_handler(int s) {
+    printf("SIGPIPE\n");
 }
 
 //------------------------------------------------------------------------------
@@ -103,6 +111,7 @@ int main(int argc, char** argv) {
 
     set_logmask(~0);
     std::signal(SIGINT, ctrlc_handler);
+    std::signal(SIGPIPE, sigpipe_handler);
 
     communication.set_listener("*", args.port);
     communication.event_loop();

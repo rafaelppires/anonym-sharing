@@ -26,7 +26,6 @@ class AnonymBE {
     int input_file(const std::string &data);
 
     int init(Arguments *);
-    int accept(int fd);
     void finish();
 
    private:
@@ -56,9 +55,6 @@ class AnonymBE {
 
     // internal state
     bool init_, die_;
-#ifdef TLS_REQUESTS
-    SSL_CTX *ctx_;
-#endif
 
     // database
     Database database_;

@@ -38,7 +38,7 @@ int ecall_init(struct Arguments args) {
         return -2;
     }
 
-    init_openssl(&ssl_context);
+    IncomeSSLConnection::init();
     header_builder .set(HttpStrings::connection, HttpStrings::keepalive);
     response_builder.protocol(HttpStrings::http11).headers(header_builder);
     try {
@@ -56,11 +56,11 @@ int ecall_init(struct Arguments args) {
 //------------------------------------------------------------------------------
 void ecall_finish() {
     delete minioClient;
-    tls_finish();
+    IncomeSSLConnection::finish();
 }
 
 //------------------------------------------------------------------------------
-int ecall_tls_accept(int fd) { return tls_accept(fd, ssl_context); }
+int ecall_tls_accept(int fd) { return IncomeSSLConnection::addConnection(fd); }
 
 //------------------------------------------------------------------------------
 bool make_bucket(const Request &request) {
@@ -114,15 +114,8 @@ Response treat_request(const Request &request) {
 }
 
 //------------------------------------------------------------------------------
-int ecall_tls_close(int fd) {
-    //printf("Closed file [%d]\n", fd);
-    decoder_table.erase(fd);
-    return tlsserver_close(fd);
-}
-
-//------------------------------------------------------------------------------
 long unsigned requests_received = 0;
-int ecall_query(int fd, const char *buff, size_t len) {
+void process_input(IncomeSSLConnection &conn, const char *buff, size_t len) {
     Request req;
     std::string input(buff, len);
 
@@ -133,7 +126,7 @@ int ecall_query(int fd, const char *buff, size_t len) {
                                              eol + "Content-Length: 0" + eol +
                                              eol;
 #endif
-    Http1Decoder &decoder = decoder_table[fd];
+    Http1Decoder &decoder = conn.decoder();
 
     try {
         //printf(" File %d - %lu !!((%s))!!!\n",fd, requests_received, input.c_str());
@@ -144,14 +137,13 @@ int ecall_query(int fd, const char *buff, size_t len) {
             req = decoder.getRequest();
             std::string response = treat_request(req).toString();
             // printf("(REP{%s}REP)\n", response.c_str());
-            if (tls_send(fd, response.data(), response.size()) < 0)
+            if (conn.send(response.data(), response.size()) < 0)
                 // if (tls_send(fd, posrep.data(), posrep.size()) < 0)
                 printf("not sent\n");
         }
     } catch (const std::exception &e) {
         printf("Error: [%s]\n", e.what());
     }
-    return 0;
 }
 
 //------------------------------------------------------------------------------

@@ -2,7 +2,6 @@
 #ifndef NATIVE
 #include <enclave_anonymbe_t.h>
 #endif
-#include <http1decoder.h>
 #include <sgx_cryptoall.h>
 #include <stdio.h>
 #include <mutex>
@@ -15,21 +14,14 @@ AnonymBE<MemDatabase> anonymbe;
 AnonymBE<MongoDatabase> anonymbe;
 #endif
 
-std::mutex table_lock;
-std::map<int, Http1Decoder> decoder_table;
 //------------------------------------------------------------------------------
 long unsigned  requests_received = 0;
-int ecall_query(int fd, const char *buff, size_t len) {
+void process_input(IncomeSSLConnection &conn, const char *buff, size_t len) {
     try {
         std::string input(buff, len), response;
         Request req;
-        Http1Decoder *dec_ptr = nullptr;
-        {
-            std::lock_guard<std::mutex> lock(table_lock);
-            dec_ptr = &decoder_table[fd];
-        }
-        Http1Decoder &decoder = *dec_ptr;
 
+        Http1Decoder &decoder = conn.decoder();
         decoder.addChunk(input);
         while (decoder.requestReady()) {
             if (++requests_received % 100000 == 0)
@@ -38,38 +30,33 @@ int ecall_query(int fd, const char *buff, size_t len) {
             response = anonymbe.process_input(req).toString();
             ssize_t ret;
 #ifdef TLS_REQUESTS
-            int r = tls_send(fd, response.data(), response.size());
+            int r = conn.send(response.data(), response.size());
 #else
             ocall_send(&ret, fd, response.data(), response.size(), 0);
 #endif
         }
     } catch (const std::exception &e) {
         printf("Error: [%s]\n", e.what());
-        return -1;
     } catch (...) {
         printf(":_(   o.O   ;_;\n");
-        return -2;
     }
-    return 0;
 }
 
 //------------------------------------------------------------------------------
-int ecall_init(struct Arguments args) { return anonymbe.init(&args); }
-
-//------------------------------------------------------------------------------
-int ecall_tls_accept(int fd) { return anonymbe.accept(fd); }
-
-//------------------------------------------------------------------------------
-int ecall_tls_close(int fd) {
-    // printf("Closed file [%d]\n", fd);
-    {
-        std::lock_guard<std::mutex> lock(table_lock);
-        decoder_table.erase(fd);
-    }
-    return tlsserver_close(fd);
+int ecall_init(struct Arguments args) {
+    IncomeSSLConnection::init();
+    return anonymbe.init(&args);
 }
 
 //------------------------------------------------------------------------------
-void ecall_finish() { anonymbe.finish(); }
+int ecall_tls_accept(int fd) {
+    return IncomeSSLConnection::addConnection(fd);
+}
+
+//------------------------------------------------------------------------------
+void ecall_finish() {
+    IncomeSSLConnection::finish();
+    anonymbe.finish();
+}
 
 //------------------------------------------------------------------------------

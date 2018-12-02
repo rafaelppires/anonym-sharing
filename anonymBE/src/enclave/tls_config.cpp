@@ -8,6 +8,7 @@
 #include <unistd.h>
 #else
 #include <enclave_anonymbe_t.h>
+#include <my_wrappers.h>
 #endif
 
 #ifdef printf
@@ -81,18 +82,6 @@ static void configure_context(SSL_CTX *ctx) {
 }
 
 //------------------------------------------------------------------------------
-void init_openssl(SSL_CTX **ctx) {
-    OpenSSL_add_ssl_algorithms();
-    OpenSSL_add_all_ciphers();
-    SSL_load_error_strings();
-
-    printf("%s\n", SSLeay_version(SSLEAY_VERSION));
-    *ctx = create_context();
-    SSL_CTX_set_ecdh_auto(*ctx, 1);
-    configure_context(*ctx);
-}
-
-//------------------------------------------------------------------------------
 const char *err_str(int e) {
     switch (e) {
         case SSL_ERROR_NONE:
@@ -119,31 +108,64 @@ const char *err_str(int e) {
 }
 
 //------------------------------------------------------------------------------
-std::map<int, SSL *> open_ssl_connections;
-std::mutex conn_mutex;
+// INCOME SSL CONNECTION
 //------------------------------------------------------------------------------
-SSL *get_context(int fd) {
-    std::lock_guard<std::mutex> lock(conn_mutex);
-    auto it = open_ssl_connections.find(fd);
-    return it != open_ssl_connections.end() ? it->second : nullptr;
+std::map<int, IncomeSSLConnection> IncomeSSLConnection::connection_table;
+std::mutex IncomeSSLConnection::table_lock;
+SSL_CTX *IncomeSSLConnection::ssl_ctx = nullptr;
+//------------------------------------------------------------------------------
+IncomeSSLConnection::IncomeSSLConnection(int fd, SSL *ssl)
+    : fd_(fd), ssl_(ssl) {}
+//------------------------------------------------------------------------------
+IncomeSSLConnection::IncomeSSLConnection(IncomeSSLConnection &&c)
+    : fd_(c.fd_), ssl_(c.ssl_), decoder_(std::move(c.decoder_)) {
+    c.fd_ = -1;
+    c.ssl_ = nullptr;
 }
 
 //------------------------------------------------------------------------------
-int tls_accept(int fd, SSL_CTX *ctx) {
-    SSL *cli = SSL_new(ctx);
+IncomeSSLConnection &IncomeSSLConnection::operator=(IncomeSSLConnection &&c) {
+    close();
+    fd_ = c.fd_;
+    ssl_ = c.ssl_;
+    decoder_ = std::move(c.decoder_);
+    c.fd_ = -1;
+    c.ssl_ = nullptr;
+    return *this;
+}
+
+//------------------------------------------------------------------------------
+void IncomeSSLConnection::init() {
+    OpenSSL_add_ssl_algorithms();
+    OpenSSL_add_all_ciphers();
+    SSL_load_error_strings();
+
+    printf("%s\n", SSLeay_version(SSLEAY_VERSION));
+    ssl_ctx = create_context();
+    SSL_CTX_set_ecdh_auto(ssl_ctx, 1);
+    configure_context(ssl_ctx);
+}
+
+//------------------------------------------------------------------------------
+int IncomeSSLConnection::addConnection(int fd) {
+    if (ssl_ctx == nullptr) return -1;
+
+    SSL *cli = SSL_new(ssl_ctx);
     SSL_set_fd(cli, fd);
     ERR_clear_error();
     int r = SSL_accept(cli);
     if (r <= 0) {
         SSL_free(cli);
-        r = SSL_get_error(cli, r);
-        printf("fd: %d %s: %s\n", fd, err_str(r),
-               ERR_error_string(ERR_get_error(), nullptr));
-        return -1;
+        r = ERR_get_error();
+        printf("accept err fd: %d %s: %s\n", fd, err_str(SSL_get_error(cli, r)),
+               r ? ERR_error_string(r, nullptr) : "");
+        ::close(fd);
+        return -2;
     }
     {
-        std::lock_guard<std::mutex> lock(conn_mutex);
-        open_ssl_connections[fd] = cli;
+        std::lock_guard<std::mutex> lock(table_lock);
+        connection_table.insert(
+            std::make_pair(fd, IncomeSSLConnection(fd, cli)));
     }
     // printf("Connection accepted fd(%d)\n", fd);
     // printf("ciphersuit: %s\n", SSL_get_current_cipher(cli)->name);
@@ -151,68 +173,99 @@ int tls_accept(int fd, SSL_CTX *ctx) {
 }
 
 //------------------------------------------------------------------------------
-void tls_finish() {
-    std::lock_guard<std::mutex> lock(conn_mutex);
-    for (auto &kv : open_ssl_connections) {
-        SSL_shutdown(kv.second);
-        SSL_free(kv.second);
-        int ret;
-#ifdef NATIVE
-        close(kv.first);
-#else
-        ocall_close(&ret,kv.first);
-#endif
-    }
-    open_ssl_connections.clear();
+IncomeSSLConnection &IncomeSSLConnection::getConnection(int fd) {
+    std::lock_guard<std::mutex> lock(table_lock);
+    auto it = connection_table.find(fd);
+    if (it != connection_table.end())
+        return it->second;
+    else
+        throw NOT_FOUND;
 }
 
 //------------------------------------------------------------------------------
-
-int tlsserver_close(int fd) {
-    std::lock_guard<std::mutex> lock(conn_mutex);
-    auto it = open_ssl_connections.find(fd);
-    if (it != open_ssl_connections.end()) {
-        SSL_shutdown(it->second);
-        SSL_free(it->second);
-        open_ssl_connections.erase(it);
-        return 0;
-    }
-    return -1;
+void IncomeSSLConnection::removeConnection(int fd) {
+    std::lock_guard<std::mutex> lock(table_lock);
+    auto it = connection_table.find(fd);
+    if (it != connection_table.end())
+        connection_table.erase(it);
+    else
+        throw NOT_FOUND;
 }
 
 //------------------------------------------------------------------------------
+void IncomeSSLConnection::finish() {
+    std::lock_guard<std::mutex> lock(table_lock);
+    for (auto &kv : connection_table) {
+        kv.second.close();
+    }
+    connection_table.clear();
+}
+
+//------------------------------------------------------------------------------
+int IncomeSSLConnection::recv(char *buff, size_t len) {
+    int read = SSL_read(ssl_, buff, len);
+    if (read == 0) {
+        close();
+        throw CONNECTION_CLOSED;
+    } else if (read < 0) {
+        throw std::runtime_error(err_str(SSL_get_error(ssl_, read)));
+    }
+    return read;
+}
+
+//------------------------------------------------------------------------------
+int IncomeSSLConnection::send(const char *buff, size_t len) {
+    int ret = SSL_write(ssl_, buff, len);
+    if (ret <= 0) {
+        printf("ssl_write err: %d\n", ret);
+        return -1;
+    }
+    return 0;
+}
+
+//------------------------------------------------------------------------------
+void IncomeSSLConnection::close() {
+    if (ssl_ != nullptr) {
+        // SSL_shutdown(ssl_);
+        SSL_free(ssl_);
+        ssl_ = nullptr;
+    }
+
+    if (fd_ != -1) {
+        ::close(fd_);
+        fd_ = -1;
+    }
+}
+
+//------------------------------------------------------------------------------
+extern void process_input(IncomeSSLConnection &conn, const char *buff,
+                          size_t len);
+char read_buf[1024 * 1024];
 int ecall_tls_recv(int fd) {
-    char read_buf[1000];
-    SSL *ssl = get_context(fd);
-    if (ssl) {
+    try {
+        IncomeSSLConnection &conn = IncomeSSLConnection::getConnection(fd);
         int ret;
         do {
-            ERR_clear_error();
-            ret = SSL_read(ssl, read_buf, sizeof(read_buf));
-            if (ret > 0) {
-                ecall_query(fd, read_buf, ret);
-                // return 0;
-            } else {
-                if (ret == 0) return -1;
-                int r = SSL_get_error(ssl, r);
-                // printf(":%s:\n", err_str(r));
-                return -2;
-            }
+            ret = conn.recv(read_buf, sizeof(read_buf));
+            process_input(conn, read_buf, ret);
         } while (ret > 0);
+    } catch (IncomeSSLConnection::Exceptions e) {
+        switch (e) {
+            case IncomeSSLConnection::NOT_FOUND:
+                return -1;
+            case IncomeSSLConnection::CONNECTION_CLOSED:
+                IncomeSSLConnection::removeConnection(fd);
+                return -2;
+            default:
+                return -3;
+        }
+    } catch (const std::exception &e) {
+        std::string msg(e.what());
+        if (msg != "SSL_ERROR_WANT_READ" && msg != "SSL_ERROR_SYSCALL")
+            printf("%s\n", e.what());
+        return -4;
     }
-    return -3;
+    return 0;
 }
 
 //------------------------------------------------------------------------------
-int tls_send(int fd, const char *buff, size_t len) {
-    SSL *ssl = get_context(fd);
-    if (ssl) {
-        int ret = SSL_write(ssl, buff, len);
-        if (ret <= 0) {
-            printf("ssl_write err: %d\n", ret);
-            return -2;
-        }
-        return 0;
-    }
-    return -1;
-}

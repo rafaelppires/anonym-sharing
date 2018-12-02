@@ -46,8 +46,6 @@ enclave {
     trusted {
         public int ecall_init(struct Arguments args);
         public void ecall_finish(void);
-        public int ecall_query(int fd,[in,size=len] const char *buff, size_t len);
-        public int ecall_tls_close(int fd);
         public int ecall_tls_recv(int fd);
         public int ecall_tls_accept(int fd);
     };

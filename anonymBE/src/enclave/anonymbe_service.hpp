@@ -202,8 +202,11 @@ Response AnonymBE<T>::process_input(const Request &request) {
         }
     } catch (nlohmann::detail::exception &e) {
         printf("Err: %s\n", e.what());
+        for(const auto &kv: response)
+        printf("[%s][%s]\n",kv.first.c_str(),kv.second.c_str());
+        printf("<%s><%s>\n",err_amcs(error).c_str(),extra.c_str());
     }
-    return Response();
+    return {};
 }
 //------------------------------------------------------------------------------
 template <typename T>
@@ -246,9 +249,6 @@ int AnonymBE<T>::input_file(const std::string &data) {}
 //------------------------------------------------------------------------------
 template <typename T>
 int AnonymBE<T>::init(Arguments *args) {
-#ifdef TLS_REQUESTS
-    init_openssl(&ctx_);
-#endif
     try {
         database_.init(args->mongo);
         init_ = true;
@@ -257,14 +257,6 @@ int AnonymBE<T>::init(Arguments *args) {
         return -1;
     }
     return 0;
-}
-
-//------------------------------------------------------------------------------
-template <typename T>
-int AnonymBE<T>::accept(int fd) {
-#ifdef TLS_REQUESTS
-    return tls_accept(fd, ctx_);
-#endif
 }
 
 //------------------------------------------------------------------------------

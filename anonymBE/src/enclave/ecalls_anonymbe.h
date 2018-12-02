@@ -1,7 +1,7 @@
-#ifdef NATIVE
 #ifndef _ECALLS_ANONYMBE_H_
 #define _ECALLS_ANONYMBE_H_
 
+#ifdef NATIVE
 #include <cstdlib>
 
 int ecall_init(struct Arguments args);
@@ -11,6 +11,6 @@ int ecall_tls_recv(int fd);
 int ecall_tls_close(int fd);
 int ecall_tls_accept(int fd);
 
-#endif //_ECALLS_ANONYMBE_H_
 #endif // NATIVE
+#endif //_ECALLS_ANONYMBE_H_
 

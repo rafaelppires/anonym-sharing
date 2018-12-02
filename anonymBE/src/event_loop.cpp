@@ -74,23 +74,8 @@ void SocketEventLoop::consume_fd(int fd, std::string &msg) const {
 #else
     ecall_tls_recv(g_eid, &ret, fd);
 #endif
-    if (ret == -1) {  // connection gracefully closed
-#ifdef NATIVE
-        ret = ecall_tls_close(fd);
-#else
-        ecall_tls_close(g_eid, &ret, fd);
-#endif
-        close(fd);
-    } else if (ret != -2) {
-        /*
-        printf("TLS Recv: %s\n",
-               ret == -2 ? "Data consumed, waiting more"
-                         : (ret == -3 ? "Did not find the SSL context"
-                                      : std::to_string(ret).c_str()));
-        //*/
-    }
     msg.clear();
-#else
+#else // TLS_REQUESTS
     ssize_t sz;
     char buff[1000];
 
@@ -186,8 +171,6 @@ void SocketEventLoop::event_loop() {
                 ecall_tls_accept(g_eid, &ret, conn_sock);
 #endif
                 if (ret) {
-                    printf("SSL accept failure. fd: %d\n", conn_sock);
-                    close(conn_sock);
                     continue;
                 }
 #endif

@@ -9772,12 +9772,10 @@ class serializer
 
                 case UTF8_REJECT:  // decode found invalid UTF-8 byte
                 {
-                    std::stringstream ss;
-                    ss << "XX";
-#if 0
-                    ss << std::setw(2) << std::uppercase << std::setfill('0') << std::hex << static_cast<int>(byte);
-#endif
-                    JSON_THROW(type_error::create(316, "invalid UTF-8 byte at index " + std::to_string(i) + ": 0x" + ss.str()));
+                    char hex[3] = {0};
+                    snprintf(hex,sizeof(hex),"%02X",byte);
+                    hex[2] = 0;
+                    JSON_THROW(type_error::create(316, "invalid UTF-8 byte at index " + std::to_string(i) + ": 0x" + hex));
                 }
 
                 default:  // decode found yet incomplete multi-byte code point
