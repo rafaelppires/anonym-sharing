@@ -12,10 +12,10 @@ open class WriterProxyBenchmark {
     @Param("true", "false")
     private var isThroughProxyString: String = ""
 
-    @Param("10000")
+    @Param("1024", "10240", "102400", "1024000")
     private var dataSizeBytes: String = ""
 
-    @Param("1", "2", "3", "4")
+    @Param("1", "2", "3", "4", "5", "6")
     private var scale: String = ""
 
     @Volatile
@@ -49,8 +49,13 @@ open class WriterProxyBenchmark {
         service.createBucketIfNotExists(bucket)
     }
 
-    @TearDown(Level.Iteration)
+    @TearDown(Level.Trial)
     fun tearDown() {
+        Cluster.scaleService(Deployment.WRITERPROXY, 0)
+    }
+
+    @TearDown(Level.Iteration)
+    fun iterationTearDown() {
         println("Number of errors: $errors")
 
         println("")
@@ -68,3 +73,4 @@ open class WriterProxyBenchmark {
 
     }
 }
+
