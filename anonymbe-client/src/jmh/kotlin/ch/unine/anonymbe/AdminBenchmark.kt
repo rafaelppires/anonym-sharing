@@ -19,7 +19,7 @@ abstract class AdminBenchmark {
     protected lateinit var service: AdminApi
 
     @Setup(Level.Trial)
-    open fun setup() {
+    fun setup() {
         Cluster.scaleService(Deployment.fromUrl(endpointUrl), scale.toInt())
 
         service = Api.build(endpointUrl)

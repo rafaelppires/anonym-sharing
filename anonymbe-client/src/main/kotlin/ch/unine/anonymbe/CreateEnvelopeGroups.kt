@@ -1,7 +1,6 @@
 package ch.unine.anonymbe
 
 import ch.unine.anonymbe.api.*
-import kotlin.streams.asStream
 
 /**
  * Creates users and groups to be used by the EnvelopeBenchmark
