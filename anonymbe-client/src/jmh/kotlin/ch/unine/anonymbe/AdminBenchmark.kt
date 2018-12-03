@@ -19,11 +19,14 @@ open class CounterThreadState {
 
 @State(Scope.Benchmark)
 open class AdminBenchmark {
-    @Param(Deployments.ANONYMBE_MEM_URL, Deployments.ANONYMBE_MONGO_URL)
+    @Param(Deployments.ANONYMBE_MONGO_URL) //Deployments.ANONYMBE_MEM_URL
     private var endpointUrl: String = ""
 
     @Param("1", "2")
     private var scale: String = ""
+
+    @Volatile
+    private var errors = 0
 
     private lateinit var service: AdminApi
 
@@ -32,24 +35,40 @@ open class AdminBenchmark {
         Cluster.scaleService(Deployment.fromUrl(endpointUrl), scale.toInt())
 
         service = Api.build(endpointUrl)
-        var tries = 0
-        while (tries < 0 && try {
+    }
+
+    @TearDown(Level.Trial)
+    fun tearDown() {
+        Cluster.scaleService(Deployment.fromUrl(endpointUrl), 0)
+    }
+
+    @TearDown(Level.Iteration)
+    fun iterationTearDown() {
+        println("Number of errors: $errors")
+        errors = 0
+
+        var tries = 20
+        while (tries --> 0 && try {
                 service.deleteAllData().execute().throwExceptionIfNotReallySuccessful()
                 false
             } catch (e: Exception) {
                 true
             }
         ) {
-            tries++
             println("Error deleting all data, waiting 1 second")
             Thread.sleep(1000)
         }
     }
 
     @Benchmark
+    @BenchmarkMode(Mode.SampleTime)
     fun addUserBenchmark(ts: CounterThreadState) {
         val name = "testuser${++ts.counter}"
         val user = User(name)
-        service.createUser(user).execute()
+        try {
+            service.createUser(user).execute()
+        } catch (_: Exception) {
+            errors++
+        }
     }
 }
