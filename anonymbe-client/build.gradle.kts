@@ -13,7 +13,7 @@ version = "0.1"
 jmh {
     warmupForks = 0
     fork = 1
-    threads = 1
+    threads = 5
 
     warmup = "5s"
     warmupIterations = 1
@@ -23,7 +23,8 @@ jmh {
 
     include = listOf(
         //"AdminBenchmark",
-        "WriterProxyBenchmark"
+        //"WriterProxyBenchmark"
+        "GroupBenchmark"
     )
 }
 
