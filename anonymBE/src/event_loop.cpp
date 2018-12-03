@@ -150,6 +150,7 @@ void SocketEventLoop::event_loop() {
     for (;;) {
         nfds = epoll_wait(epollfd_, events, MAX_EVENTS, -1);
         if (nfds == -1) {
+            if (errno == EINTR) continue;
             // exit_error(EXIT_FAILURE, "epoll_wait: %s\n", strerror(errno));
             printf("epoll_wait: %s\n", strerror(errno));
         }

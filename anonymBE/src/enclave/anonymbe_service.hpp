@@ -158,32 +158,31 @@ Response AnonymBE<T>::process_input(const Request &request) {
         return Response();
 #endif
     }
-
-    std::string verb, command, content, extra;
-    bool post, put, get;
+    std::string verb, extra;
     ASKYError error = ASKY_NOERROR;
     KVString response;
+    verb = request.method();
     try {
-        if (request.method() == "GET") {
+        if (verb == "GET") {
             error = process_get(request, response);
-        } else if (request.method() == "PUT") {
+        } else if (verb == "PUT") {
             error = process_put(request);
-        } else if (request.method() == "POST") {
+        } else if (verb == "POST") {
             error = process_post(request, response);
-        } else if (request.method() == "DELETE") {
+        } else if (verb == "DELETE") {
             error = process_delete(request);
         }
 
         if (error == ASKY_BAD_REQUEST) {
-            extra = "Unknown command '" + command + "'";
+            extra = "Unknown command '" + request.url().encodedPath() + "'";
         }
-    } catch (nlohmann::detail::out_of_range &e) {
+    } catch (const nlohmann::detail::out_of_range &e) {
         extra = e.what();
         error = ASKY_BAD_REQUEST;
-    } catch (std::invalid_argument &e) {
+    } catch (const std::invalid_argument &e) {
         extra = e.what();
         error = ASKY_BAD_REQUEST;
-    } catch (std::logic_error &e) {  // warning, not error
+    } catch (const std::logic_error &e) {  // warning, not error
         response["info"] = e.what();
     } catch (uint32_t e) {
         extra = mongo_error(e);

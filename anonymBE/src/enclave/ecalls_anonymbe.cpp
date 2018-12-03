@@ -15,7 +15,7 @@ AnonymBE<MongoDatabase> anonymbe;
 #endif
 
 //------------------------------------------------------------------------------
-long unsigned  requests_received = 0;
+long unsigned requests_received = 0;
 void process_input(IncomeSSLConnection &conn, const char *buff, size_t len) {
     try {
         std::string input(buff, len), response;
@@ -49,9 +49,7 @@ int ecall_init(struct Arguments args) {
 }
 
 //------------------------------------------------------------------------------
-int ecall_tls_accept(int fd) {
-    return IncomeSSLConnection::addConnection(fd);
-}
+int ecall_tls_accept(int fd) { return IncomeSSLConnection::addConnection(fd); }
 
 //------------------------------------------------------------------------------
 void ecall_finish() {

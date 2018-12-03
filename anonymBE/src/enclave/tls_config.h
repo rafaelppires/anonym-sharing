@@ -11,6 +11,7 @@
 class IncomeSSLConnection {
 public:
     IncomeSSLConnection(int fd, SSL *ssl);
+    ~IncomeSSLConnection();
     IncomeSSLConnection(IncomeSSLConnection &&);
     IncomeSSLConnection& operator=(IncomeSSLConnection &&);
     Http1Decoder& decoder() { return decoder_; }

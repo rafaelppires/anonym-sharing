@@ -117,6 +117,11 @@ SSL_CTX *IncomeSSLConnection::ssl_ctx = nullptr;
 IncomeSSLConnection::IncomeSSLConnection(int fd, SSL *ssl)
     : fd_(fd), ssl_(ssl) {}
 //------------------------------------------------------------------------------
+IncomeSSLConnection::~IncomeSSLConnection() {
+    close();
+}
+
+//------------------------------------------------------------------------------
 IncomeSSLConnection::IncomeSSLConnection(IncomeSSLConnection &&c)
     : fd_(c.fd_), ssl_(c.ssl_), decoder_(std::move(c.decoder_)) {
     c.fd_ = -1;
@@ -149,6 +154,13 @@ void IncomeSSLConnection::init() {
 //------------------------------------------------------------------------------
 int IncomeSSLConnection::addConnection(int fd) {
     if (ssl_ctx == nullptr) return -1;
+
+    {   // may possibly happen when a fd recently closed is re-assigned to 
+        // a new socket
+        std::lock_guard<std::mutex> lock(table_lock);
+        if (connection_table.find(fd) != connection_table.end())
+            connection_table.erase(fd);
+    }
 
     SSL *cli = SSL_new(ssl_ctx);
     SSL_set_fd(cli, fd);
