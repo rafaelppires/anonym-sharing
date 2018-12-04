@@ -35,6 +35,9 @@ interface AdminApi {
 interface UserApi {
     @POST("verifier/envelope")
     fun getEnvelope(@Body bucket: Bucket): Call<EnvelopeResult>
+
+    @POST("verifier/usergroup")
+    fun isUserPartOfGroup(@Body userGroup: UserGroup): Call<BelongsResult>
 }
 
 interface WriterProxyApi {

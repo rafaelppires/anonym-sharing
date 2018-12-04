@@ -1,5 +1,6 @@
 package ch.unine.anonymbe.api
 
+import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import retrofit2.Response
 
@@ -65,6 +66,18 @@ class UserResult(
     }
 }
 
+@JsonClass(generateAdapter = true)
+class BelongsResult(
+    result: String, msg: String?, detail: String?, info: String?,
+    @Json(name = "belongs") internal val belongsString: String
+) : Result(result, msg, detail, info) {
+    val belongs: Boolean = belongsString.toBoolean()
+
+    override fun toString(): String {
+        return "BelongsResult(belongs='$belongs') ${super.toString()}"
+    }
+}
+
 @Throws(Exception::class)
 fun <T> Response<T>.throwExceptionIfNotSuccessful() {
     if (!isSuccessful) {
@@ -86,3 +99,9 @@ fun <T : Result> Response<T>.throwExceptionIfNotReallySuccessful() {
 
 val <T : Result> Response<T>.isReallySuccessful: Boolean
     get() = isSuccessful && body()?.result == Api.RESULT_OK
+
+val <T : Result> Response<T>.bodyOrElseThrow: T
+    get() {
+        throwExceptionIfNotReallySuccessful()
+        return body()!!
+    }

@@ -2,23 +2,11 @@ package ch.unine.anonymbe
 
 import ch.unine.anonymbe.api.AdminApi
 import ch.unine.anonymbe.api.Api
-import ch.unine.anonymbe.api.User
 import ch.unine.anonymbe.api.throwExceptionIfNotReallySuccessful
 import org.openjdk.jmh.annotations.*
-import org.openjdk.jmh.infra.ThreadParams
-
-@State(Scope.Thread)
-open class CounterThreadState {
-    var counter = 0
-
-    @Setup(Level.Trial)
-    fun setup(params: ThreadParams) {
-        counter = params.threadIndex * (Int.MAX_VALUE / params.threadCount)
-    }
-}
 
 @State(Scope.Benchmark)
-open class AdminBenchmark {
+abstract class AdminBenchmark {
     @Param(Deployments.ANONYMBE_MONGO_URL) //Deployments.ANONYMBE_MEM_URL
     private var endpointUrl: String = ""
 
@@ -26,12 +14,12 @@ open class AdminBenchmark {
     private var scale: String = ""
 
     @Volatile
-    private var errors = 0
+    protected var errors = 0
 
-    private lateinit var service: AdminApi
+    protected lateinit var service: AdminApi
 
     @Setup(Level.Trial)
-    fun setup(ts: CounterThreadState) {
+    fun setup() {
         Cluster.scaleService(Deployment.fromUrl(endpointUrl), scale.toInt())
 
         service = Api.build(endpointUrl)
@@ -47,7 +35,7 @@ open class AdminBenchmark {
         println("Number of errors: $errors")
         errors = 0
 
-        var tries = 20
+        var tries = 10
         while (tries --> 0 && try {
                 service.deleteAllData().execute().throwExceptionIfNotReallySuccessful()
                 false
@@ -57,18 +45,6 @@ open class AdminBenchmark {
         ) {
             println("Error deleting all data, waiting 1 second")
             Thread.sleep(1000)
-        }
-    }
-
-    @Benchmark
-    @BenchmarkMode(Mode.SampleTime)
-    fun addUserBenchmark(ts: CounterThreadState) {
-        val name = "testuser${++ts.counter}"
-        val user = User(name)
-        try {
-            service.createUser(user).execute()
-        } catch (_: Exception) {
-            errors++
         }
     }
 }
