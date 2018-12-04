@@ -114,6 +114,10 @@ typename AnonymBE<T>::ASKYError AnonymBE<T>::process_post(
             std::string key((const char *)k.data(), KEY_SIZE);
             ctext += Crypto::encrypt_aesgcm(key, bucket_key);
         }
+        if (ctext.empty()) {
+            response["detail"] = "empty envelope";
+            return ASKY_BAD_REQUEST;
+        }
         response["ciphertext"] = Crypto::b64_encode(ctext);
         return ASKY_NOERROR;
     } else if (command == "/verifier/usergroup") {
