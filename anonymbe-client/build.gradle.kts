@@ -24,7 +24,7 @@ jmh {
     include = listOf(
         //"AdminBenchmark",
         //"WriterProxyBenchmark"
-        "GroupBenchmark"
+        "EnvelopeBenchmark"
     )
 }
 

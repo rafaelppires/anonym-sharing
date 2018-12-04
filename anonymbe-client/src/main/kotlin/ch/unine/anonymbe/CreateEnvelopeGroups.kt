@@ -6,7 +6,7 @@ import ch.unine.anonymbe.api.*
  * Creates users and groups to be used by the EnvelopeBenchmark
  */
 fun main(args: Array<String>) {
-    val service = Api.build<AdminApi>()
+    val service = Api.build<AdminApi>(args.getOrElse(0) { Api.DEFAULT_URL })
 
     for (i in 1..MAX_MAGNITUDE) {
         try {
@@ -25,7 +25,12 @@ fun main(args: Array<String>) {
     var magnitude = 1
     while (magnitude <= MAX_MAGNITUDE) {
         println("Creating group of $magnitude users")
-        for (i in 1..magnitude) {
+        service
+            .createGroup(UserGroup("${USER_NAME_PREFIX}1", "$GROUP_NAME_PREFIX$magnitude"))
+            .execute()
+            .throwExceptionIfNotReallySuccessful()
+
+        for (i in 2..magnitude) {
             service
                 .addUserToGroup(UserGroup("$USER_NAME_PREFIX$i", "$GROUP_NAME_PREFIX$magnitude"))
                 .execute()
