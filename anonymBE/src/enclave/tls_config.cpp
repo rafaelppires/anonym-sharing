@@ -82,7 +82,8 @@ static void configure_context(SSL_CTX *ctx) {
 }
 
 //------------------------------------------------------------------------------
-const char *err_str(int e) {
+const char *err_str(SSL *s, int r) {
+    int e = SSL_get_error(s, r);
     switch (e) {
         case SSL_ERROR_NONE:
             return "SSL_ERROR_NONE";
@@ -117,9 +118,7 @@ SSL_CTX *IncomeSSLConnection::ssl_ctx = nullptr;
 IncomeSSLConnection::IncomeSSLConnection(int fd, SSL *ssl)
     : fd_(fd), ssl_(ssl) {}
 //------------------------------------------------------------------------------
-IncomeSSLConnection::~IncomeSSLConnection() {
-    close();
-}
+IncomeSSLConnection::~IncomeSSLConnection() { close(); }
 
 //------------------------------------------------------------------------------
 IncomeSSLConnection::IncomeSSLConnection(IncomeSSLConnection &&c)
@@ -155,7 +154,7 @@ void IncomeSSLConnection::init() {
 int IncomeSSLConnection::addConnection(int fd) {
     if (ssl_ctx == nullptr) return -1;
 
-    {   // may possibly happen when a fd recently closed is re-assigned to 
+    {  // may possibly happen when a fd recently closed is re-assigned to
         // a new socket
         std::lock_guard<std::mutex> lock(table_lock);
         if (connection_table.find(fd) != connection_table.end())
@@ -168,9 +167,9 @@ int IncomeSSLConnection::addConnection(int fd) {
     int r = SSL_accept(cli);
     if (r <= 0) {
         SSL_free(cli);
-        r = ERR_get_error();
-        printf("accept err fd: %d %s: %s\n", fd, err_str(SSL_get_error(cli, r)),
-               r ? ERR_error_string(r, nullptr) : "");
+        int e = ERR_get_error();
+        printf("accept err fd: %d %s: %s\n", fd, err_str(cli, r),
+               e ? ERR_error_string(e, nullptr) : "");
         ::close(fd);
         return -2;
     }
@@ -220,7 +219,7 @@ int IncomeSSLConnection::recv(char *buff, size_t len) {
         close();
         throw CONNECTION_CLOSED;
     } else if (read < 0) {
-        throw std::runtime_error(err_str(SSL_get_error(ssl_, read)));
+        throw std::runtime_error(err_str(ssl_, read));
     }
     return read;
 }
@@ -229,7 +228,9 @@ int IncomeSSLConnection::recv(char *buff, size_t len) {
 int IncomeSSLConnection::send(const char *buff, size_t len) {
     int ret = SSL_write(ssl_, buff, len);
     if (ret <= 0) {
-        printf("ssl_write err: %d\n", ret);
+        int e = ERR_get_error();
+        printf("ssl_write err ret:%d errno:%d: %s %s\n", ret, errno,
+               err_str(ssl_, ret), e ? ERR_error_string(e, nullptr) : "");
         return -1;
     }
     return 0;
@@ -252,11 +253,11 @@ void IncomeSSLConnection::close() {
 //------------------------------------------------------------------------------
 extern void process_input(IncomeSSLConnection &conn, const char *buff,
                           size_t len);
-char read_buf[1024 * 1024];
 int ecall_tls_recv(int fd) {
     try {
         IncomeSSLConnection &conn = IncomeSSLConnection::getConnection(fd);
         int ret;
+        char read_buf[1024];
         do {
             ret = conn.recv(read_buf, sizeof(read_buf));
             process_input(conn, read_buf, ret);
