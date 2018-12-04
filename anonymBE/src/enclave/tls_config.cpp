@@ -109,6 +109,10 @@ const char *err_str(SSL *s, int r) {
 }
 
 //------------------------------------------------------------------------------
+// INCOME CONNECTION
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
 // INCOME SSL CONNECTION
 //------------------------------------------------------------------------------
 std::map<int, IncomeSSLConnection> IncomeSSLConnection::connection_table;
@@ -122,17 +126,17 @@ IncomeSSLConnection::~IncomeSSLConnection() { close(); }
 
 //------------------------------------------------------------------------------
 IncomeSSLConnection::IncomeSSLConnection(IncomeSSLConnection &&c)
-    : fd_(c.fd_), ssl_(c.ssl_), decoder_(std::move(c.decoder_)) {
+    : IncomeConnection(std::move(c)), fd_(c.fd_), ssl_(c.ssl_) {
     c.fd_ = -1;
     c.ssl_ = nullptr;
 }
 
 //------------------------------------------------------------------------------
 IncomeSSLConnection &IncomeSSLConnection::operator=(IncomeSSLConnection &&c) {
+    IncomeConnection::operator=(std::move(c));
     close();
     fd_ = c.fd_;
     ssl_ = c.ssl_;
-    decoder_ = std::move(c.decoder_);
     c.fd_ = -1;
     c.ssl_ = nullptr;
     return *this;

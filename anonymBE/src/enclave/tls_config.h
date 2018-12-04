@@ -8,13 +8,23 @@
 #include <http1decoder.h>
 #include <mutex>
 
-class IncomeSSLConnection {
+class IncomeConnection {
+public:
+    IncomeConnection() = default;
+    IncomeConnection(IncomeConnection&&) = default;
+    IncomeConnection& operator=(IncomeConnection&&) = default;
+    virtual int send(const char *buff, size_t len) = 0;
+    Http1Decoder& decoder() { return decoder_; }
+protected:
+    Http1Decoder decoder_;
+};
+
+class IncomeSSLConnection : public IncomeConnection {
 public:
     IncomeSSLConnection(int fd, SSL *ssl);
     ~IncomeSSLConnection();
     IncomeSSLConnection(IncomeSSLConnection &&);
     IncomeSSLConnection& operator=(IncomeSSLConnection &&);
-    Http1Decoder& decoder() { return decoder_; }
 
     int send(const char *buff, size_t len);
     int recv(char *buff, size_t len);
@@ -35,7 +45,6 @@ private:
 
     int fd_;
     SSL *ssl_;
-    Http1Decoder decoder_;
 };
 
 #endif

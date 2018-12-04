@@ -183,6 +183,9 @@ Response AnonymBE<T>::process_input(const Request &request) {
     } catch (const nlohmann::detail::out_of_range &e) {
         extra = e.what();
         error = ASKY_BAD_REQUEST;
+    } catch (const nlohmann::detail::parse_error &e) {
+        extra = e.what();
+        error = ASKY_BAD_REQUEST;
     } catch (const std::invalid_argument &e) {
         extra = e.what();
         error = ASKY_BAD_REQUEST;
