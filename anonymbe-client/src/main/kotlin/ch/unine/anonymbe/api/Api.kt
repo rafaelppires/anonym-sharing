@@ -25,7 +25,7 @@ interface AdminApi {
     @PUT("access/usergroup")
     fun addUserToGroup(@Body userGroup: UserGroup): Call<Result>
 
-    @DELETE("access/usergroup")
+    @HTTP(method = "DELETE", path = "access/usergroup", hasBody = true)
     fun deleteUserFromGroup(@Body userGroup: UserGroup): Call<Result>
 
     @DELETE("access/all")

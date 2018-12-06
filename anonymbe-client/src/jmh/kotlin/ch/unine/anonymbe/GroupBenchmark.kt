@@ -12,18 +12,29 @@ open class GroupBenchmark : AdminBenchmark() {
     @Param("20000")
     private var usersAmount: String = "0"
 
+    @Param("false")
+    private var preAddGroups: String = "false"
+
     private val queue: Queue<UserGroup> = ConcurrentLinkedQueue()
 
     @Setup(Level.Iteration)
     fun fillDatabase() {
         println("${queue.size} items left in queue")
         queue.clear()
+
         println("Filling database")
-        val users = (1..(usersAmount.toInt())).map { "user$it" }
-        users.parallelStream().forEach {
-            service.createUser(User(it)).execute()
-            queue.add(UserGroup(it, "creategrouptest"))
-        }
+        val preAdd = preAddGroups.toBoolean()
+        (1..(usersAmount.toInt()))
+            .map { "user$it" }
+            .parallelStream()
+            .forEach { userId ->
+                service.createUser(User(userId)).execute()
+                val userGroup = UserGroup(userId, "creategrouptest")
+                if (preAdd) {
+                    service.addUserToGroup(userGroup).execute()
+                }
+                queue.add(userGroup)
+            }
         println("Filled")
     }
 
@@ -32,5 +43,12 @@ open class GroupBenchmark : AdminBenchmark() {
     fun addUserToGroupBenchmark() {
         val userGroup = queue.remove()
         service.addUserToGroup(userGroup).execute().throwExceptionIfNotSuccessful()
+    }
+
+    @Benchmark
+    @BenchmarkMode(Mode.Throughput)
+    fun deleteUserFromGroupBenchmark() {
+        val userGroup = queue.remove()
+        service.deleteUserFromGroup(userGroup).execute().throwExceptionIfNotSuccessful()
     }
 }
