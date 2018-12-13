@@ -1,6 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
+    id("maven-publish")
     id("com.github.johnrengelman.shadow") version "4.0.3"
     kotlin("jvm") version "1.3.10"
     id("org.jetbrains.kotlin.kapt") version "1.3.10"
@@ -9,6 +10,21 @@ plugins {
 
 group = "ch.unine"
 version = "0.1"
+
+task<Jar>("sourcesJar") {
+    from(sourceSets.main.get().allSource)
+    classifier = "sources"
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            artifactId = "anonymbe-client"
+            from(components["java"])
+            artifact(tasks["sourcesJar"])
+        }
+    }
+}
 
 jmh {
     warmupForks = 0
