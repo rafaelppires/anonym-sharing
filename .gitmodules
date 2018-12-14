@@ -13,3 +13,6 @@
 [submodule "eval/tputlat/wrk2"]
 	path = eval/tputlat/wrk2
 	url = https://github.com/giltene/wrk2.git
+[submodule "YCSB"]
+	path = macrobenchmarks/YCSB
+	url = git@github.com:sebva/YCSB.git
