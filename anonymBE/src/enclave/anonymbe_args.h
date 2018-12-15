@@ -7,6 +7,7 @@ extern "C" {
 #endif
 struct Arguments {
     size_t port;
+    char indexed;
     char mongo[1024];
 };
 #ifdef __cplusplus

@@ -13,6 +13,8 @@
 #ifdef TLS_REQUESTS
 #include <tls_config.h>
 #endif
+#include <json/json.hpp>
+using json = nlohmann::json;
 typedef std::map<std::string, std::string> KVString;
 
 template <typename Database>
@@ -47,6 +49,9 @@ class AnonymBE {
     ASKYError process_post(const Request &, KVString &rep);
     ASKYError process_delete(const Request &);
 
+    ASKYError generate_envelope(json &,KVString &response);
+    ASKYError create_user(json &,KVString &response);
+
     std::string mongo_error(uint32_t);
     std::string sgx_errmsg(int);
     std::string err_amcs(ASKYError e);
@@ -54,7 +59,7 @@ class AnonymBE {
     static const Response posrep, negrep;
 
     // internal state
-    bool init_, die_;
+    bool init_, indexed_, die_;
 
     // database
     Database database_;

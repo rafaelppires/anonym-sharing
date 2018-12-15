@@ -7,7 +7,6 @@
 #endif
 #include <sgx_cryptoall.h>
 #include <stdio.h>
-#include <json/json.hpp>
 
 #define KEY_SIZE 32
 
@@ -47,8 +46,6 @@ AnonymBE<T>::AnonymBE()
 }
 
 //------------------------------------------------------------------------------
-using json = nlohmann::json;
-//------------------------------------------------------------------------------
 template <typename T>
 typename AnonymBE<T>::ASKYError AnonymBE<T>::process_get(const Request &request,
                                                          KVString &response) {
@@ -62,6 +59,67 @@ typename AnonymBE<T>::ASKYError AnonymBE<T>::process_get(const Request &request,
     }
 
     return ASKY_BAD_REQUEST;
+}
+
+//------------------------------------------------------------------------------
+template <typename T>
+typename AnonymBE<T>::ASKYError AnonymBE<T>::generate_envelope(
+    json &j, KVString &response) {
+    std::string ctext;
+    std::string bucket_key = Crypto::b64_decode(json_str(j, "bucket_key"));
+    bucket_key.resize(32, 0);
+    KeyArray ka = database_.get_keys_of_group(json_str(j, "group_id"));
+
+    // if empty
+    if (ka.empty()) {
+        response["detail"] = "empty envelope";
+        return ASKY_BAD_REQUEST;
+    }
+
+    if (indexed_) {
+        // compute nonce
+        std::string nonce = Crypto::get_rand(12);
+
+        // put hashes of <nonce,key> in an ordered container
+        KVString orderedhashes;
+        for (const auto &k : ka) {
+            std::string key((const char *)k.data(), KEY_SIZE);
+            orderedhashes[Crypto::sha224(nonce + key)] =
+                Crypto::encrypt_aesgcm(key, bucket_key);
+        }
+
+        // add hashes and keys in order
+        for (const auto &kv : orderedhashes) {
+            ctext += kv.first + kv.second;
+        }
+
+        // put the nonce in the end
+        ctext += nonce;
+    } else {
+        for (const auto &k : ka) {
+            std::string key((const char *)k.data(), KEY_SIZE);
+            ctext += Crypto::encrypt_aesgcm(key, bucket_key);
+        }
+    }
+    response["ciphertext"] = Crypto::b64_encode(ctext);
+    return ASKY_NOERROR;
+}
+
+//------------------------------------------------------------------------------
+template <typename T>
+typename AnonymBE<T>::ASKYError AnonymBE<T>::create_user(json &j,
+                                                         KVString &response) {
+    unsigned char rnd[KEY_SIZE];
+#ifdef NATIVE
+    for (int i = 0; i < sizeof(rnd); i += sizeof(int)) *(int *)&rnd[i] = rand();
+#else
+    sgx_read_rand(rnd, sizeof(rnd));
+#endif
+    std::string key = std::string((const char *)rnd, sizeof(rnd));
+    database_.create_user(json_str(j, "user_id"), key);
+    // if( key == "" ) return ASKY_CREATE_EXISTENT;
+    response["user_key"] = Crypto::b64_encode(key);
+    return ASKY_NOERROR;
 }
 
 //------------------------------------------------------------------------------
@@ -89,37 +147,13 @@ typename AnonymBE<T>::ASKYError AnonymBE<T>::process_post(
     const HttpUrl &url = request.url();
     std::string command = url.encodedPath();
     if (command == "/access/user") {
-        unsigned char rnd[KEY_SIZE];
-#ifdef NATIVE
-        for(int i = 0; i < sizeof(rnd); i += sizeof(int)) 
-            *(int *)&rnd[i] = rand();
-#else
-        sgx_read_rand(rnd, sizeof(rnd));
-#endif
-        std::string key = std::string((const char *)rnd, sizeof(rnd));
-        database_.create_user(json_str(j, "user_id"), key);
-        // if( key == "" ) return ASKY_CREATE_EXISTENT;
-        response["user_key"] = Crypto::b64_encode(key);
-        return ASKY_NOERROR;
+        return create_user(j, response);
     } else if (command == "/access/group") {
         database_.create_group(json_str(j, "group_name"),
                                json_str(j, "user_id"));
         return ASKY_NOERROR;
     } else if (command == "/verifier/envelope") {
-        std::string ctext;
-        std::string bucket_key = Crypto::b64_decode(json_str(j, "bucket_key"));
-        bucket_key.resize(32, 0);
-        KeyArray ka = database_.get_keys_of_group(json_str(j, "group_id"));
-        for (const auto &k : ka) {
-            std::string key((const char *)k.data(), KEY_SIZE);
-            ctext += Crypto::encrypt_aesgcm(key, bucket_key);
-        }
-        if (ctext.empty()) {
-            response["detail"] = "empty envelope";
-            return ASKY_BAD_REQUEST;
-        }
-        response["ciphertext"] = Crypto::b64_encode(ctext);
-        return ASKY_NOERROR;
+        return generate_envelope(j, response);
     } else if (command == "/verifier/usergroup") {
         bool answer = database_.is_user_part_of_group(
             json_str(j, "user_id"), json_str(j, "group_name"));
@@ -208,9 +242,9 @@ Response AnonymBE<T>::process_input(const Request &request) {
         }
     } catch (nlohmann::detail::exception &e) {
         printf("Err: %s\n", e.what());
-        for(const auto &kv: response)
-        printf("[%s][%s]\n",kv.first.c_str(),kv.second.c_str());
-        printf("<%s><%s>\n",err_amcs(error).c_str(),extra.c_str());
+        for (const auto &kv : response)
+            printf("[%s][%s]\n", kv.first.c_str(), kv.second.c_str());
+        printf("<%s><%s>\n", err_amcs(error).c_str(), extra.c_str());
     }
     return {};
 }
@@ -257,6 +291,7 @@ template <typename T>
 int AnonymBE<T>::init(Arguments *args) {
     try {
         database_.init(args->mongo);
+        indexed_ = args->indexed != 0;
         init_ = true;
     } catch (uint32_t e) {
         printf("Error: %u\n", e);
