@@ -10,3 +10,6 @@
 [submodule "anonymBE/src/minioclient-cpp"]
 	path = anonymBE/src/minioclient-cpp
 	url = https://github.com/rafaelppires/minioclient-cpp.git
+[submodule "eval/tputlat/wrk2"]
+	path = eval/tputlat/wrk2
+	url = https://github.com/giltene/wrk2.git

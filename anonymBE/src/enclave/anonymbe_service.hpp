@@ -177,6 +177,10 @@ typename AnonymBE<T>::ASKYError AnonymBE<T>::process_delete(
         database_.remove_user_from_group(json_str(j, "group_name"),
                                          json_str(j, "user_id"));
         return ASKY_NOERROR;
+    } else if (command == "/access/user") {
+        auto j = json::parse(request.stringBody());
+        database_.delete_user(json_str(j, "user_id").c_str());
+        return ASKY_NOERROR;
     } else if (command == "/access/aclmember") {
     } else if (command == "/access/all") {
         database_.delete_all_data();
