@@ -14,6 +14,7 @@ class MemDatabase : public Database {
                            const std::string &new_uid);
     void create_user(const std::string &uid, const std::string &key);
     void create_group(const std::string &gname, const std::string &uid);
+    void delete_user(const std::string &uid);
     void delete_all_data();
     void remove_user_from_group(const std::string &gname,
                                 const std::string &uid);

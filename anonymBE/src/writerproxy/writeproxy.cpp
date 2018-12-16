@@ -19,6 +19,9 @@ static struct argp_option options[] = {
     {"endpoint", 'm', "host:port", 0, "Minio server endpoint"},
     {"access", 'a', "ACCESSKEY", 0, "Minio access key"},
     {"secret", 'k', "SECRETKEY", 0, "Minio secret key"},
+    {"tokenuser", 'u', "USERNAME", 0, "Username of identity server"},
+    {"tokenpass", 'w', "PASSWORD", 0, "Password of identity server"},
+    {"tokenendpoint", 't', "host:port", 0, "Identity server endpoint"},
     {0}};
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state) {
@@ -37,6 +40,15 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
         case 'k':
             strncpy(args->miniosecret, arg, sizeof(args->miniosecret) - 1);
             break;
+        case 'u':
+            strncpy(args->tokenuser, arg, sizeof(args->tokenuser) - 1);
+            break;
+        case 'w':
+            strncpy(args->tokenpass, arg, sizeof(args->tokenpass) - 1);
+            break;
+        case 't':
+            strncpy(args->tokenendpoint, arg, sizeof(args->tokenendpoint) - 1);
+            break;
         default:
             return ARGP_ERR_UNKNOWN;
     };
@@ -49,6 +61,9 @@ void init_args(Arguments *args) {
     memset(args->minioendpoint, 0, sizeof(args->minioendpoint));
     memset(args->minioaccesskey, 0, sizeof(args->minioaccesskey));
     memset(args->miniosecret, 0, sizeof(args->miniosecret));
+    memset(args->tokenuser, 0, sizeof(args->tokenuser));
+    memset(args->tokenpass, 0, sizeof(args->tokenpass));
+    memset(args->tokenendpoint, 0, sizeof(args->tokenendpoint));
 }
 
 #include <sgxserver_bootstrap.cpp>

@@ -13,6 +13,7 @@ class Database {
     bool init(const std::string &initdata);
     void add_user_to_group(const std::string &gname, const std::string &uname);
     void create_user(const std::string &uname, const std::string &key);
+    void delete_user(const std::string &uname);
     void create_group(const std::string &gname, const std::string &uid);
     bool is_user_part_of_group(const std::string &uname, 
                                const std::string &gname);

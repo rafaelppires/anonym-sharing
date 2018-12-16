@@ -60,6 +60,14 @@ void MemDatabase::create_group(const std::string &gname,
 }
 
 //------------------------------------------------------------------------------
+void MemDatabase::delete_user(const std::string &uid) {
+    std::lock_guard<std::mutex> ulock(umutex_), glock(gmutex_);
+    for(auto &kv : groups_)
+        kv.second.erase(uid);
+    users_.erase(uid);
+}
+
+//------------------------------------------------------------------------------
 void MemDatabase::delete_all_data() {
     std::lock_guard<std::mutex> ulock(umutex_), glock(gmutex_);
     users_.clear();
@@ -67,12 +75,12 @@ void MemDatabase::delete_all_data() {
 }
 
 //------------------------------------------------------------------------------
-bool MemDatabase::is_user_part_of_group(const std::string &uname, 
+bool MemDatabase::is_user_part_of_group(const std::string &uname,
                                         const std::string &gname) {
     if (groups_.find(gname) != groups_.end()) {
         return groups_[gname].find(uname) != groups_[gname].end();
     } else {
-        throw std::invalid_argument("unknown group '"+gname+"'");
+        throw std::invalid_argument("unknown group '" + gname + "'");
     }
 }
 //------------------------------------------------------------------------------

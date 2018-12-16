@@ -10,8 +10,6 @@
 
 #define KEY_SIZE 32
 
-#define json_str(var, field) ((var).at(field).get<std::string>())
-
 template <typename T>
 const Response AnonymBE<T>::posrep =
     ResponseBuilder()
