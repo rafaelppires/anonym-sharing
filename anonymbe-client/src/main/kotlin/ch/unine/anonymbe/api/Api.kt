@@ -19,6 +19,9 @@ interface AdminApi {
     @POST("access/user")
     fun createUser(@Body user: User): Call<UserResult>
 
+    @HTTP(method = "DELETE", path = "access/user", hasBody = true)
+    fun deleteUser(@Body user: User): Call<Result>
+
     @POST("access/group")
     fun createGroup(@Body group: UserGroup): Call<Result>
 

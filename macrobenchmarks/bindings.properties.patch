@@ -1,0 +1,10 @@
+--- a/workdir/bin/bindings.properties	2018-12-14 10:39:46.706623291 +0000
++++ b/workdir/bin/bindings.properties	2018-12-14 10:40:11.886927564 +0000
+@@ -30,6 +30,7 @@
+ accumulo1.7:com.yahoo.ycsb.db.accumulo.AccumuloClient
+ accumulo1.8:com.yahoo.ycsb.db.accumulo.AccumuloClient
+ aerospike:com.yahoo.ycsb.db.AerospikeClient
++anonymbe-admin:com.yahoo.ycsb.db.AnonymBEAdmin
+ asynchbase:com.yahoo.ycsb.db.AsyncHBaseClient
+ arangodb:com.yahoo.ycsb.db.arangodb.ArangoDBClient
+ arangodb3:com.yahoo.ycsb.db.arangodb.ArangoDBClient
