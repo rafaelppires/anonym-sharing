@@ -78,6 +78,9 @@ typename AnonymBE<T>::ASKYError AnonymBE<T>::generate_envelope(
         // compute nonce
         std::string nonce = Crypto::get_rand(12);
 
+        // put the nonce in the beginning 
+        ctext += nonce;
+
         // put hashes of <nonce,key> in an ordered container
         KVString orderedhashes;
         for (const auto &k : ka) {
@@ -90,9 +93,6 @@ typename AnonymBE<T>::ASKYError AnonymBE<T>::generate_envelope(
         for (const auto &kv : orderedhashes) {
             ctext += kv.first + kv.second;
         }
-
-        // put the nonce in the end
-        ctext += nonce;
     } else {
         for (const auto &k : ka) {
             std::string key((const char *)k.data(), KEY_SIZE);
