@@ -1,9 +1,6 @@
 package ch.unine.anonymbe
 
-import ch.unine.anonymbe.storage.Aws
-import ch.unine.anonymbe.storage.Minio
-import ch.unine.anonymbe.storage.StorageApi
-import ch.unine.anonymbe.storage.WriterProxy
+import ch.unine.anonymbe.storage.*
 import org.junit.Assert
 import java.util.*
 import kotlin.test.Test
@@ -14,9 +11,15 @@ class AwsTest : StorageTest() {
     }
 }
 
-class MinioTest : StorageTest() {
+class RegularMinioTest : StorageTest() {
     override val storageClient by lazy {
-        Minio()
+        RegularMinio()
+    }
+}
+
+class TokenMinioTest : StorageTest() {
+    override val storageClient by lazy {
+        TokenMinio()
     }
 }
 
@@ -26,9 +29,9 @@ class WriterProxyAwsTest : StorageTest() {
     }
 }
 
-class WriterProxyMinioTest : StorageTest() {
+class WriterProxyRegularMinioTest : StorageTest() {
     override val storageClient by lazy {
-        WriterProxy(Minio())
+        WriterProxy(RegularMinio())
     }
 }
 

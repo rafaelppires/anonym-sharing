@@ -7,6 +7,7 @@ import ch.unine.anonymbe.api.UserGroup
 import ch.unine.anonymbe.client.Client
 import ch.unine.anonymbe.storage.Aws
 import ch.unine.anonymbe.storage.Minio
+import ch.unine.anonymbe.storage.TokenMinio
 import ch.unine.anonymbe.storage.WriterProxy
 import java.util.*
 import kotlin.random.Random
@@ -16,7 +17,7 @@ fun main(args: Array<String>) {
 }
 
 const val groupId = "endtoend"
-val storageClient = WriterProxy(Minio())
+val storageClient = TokenMinio()
 
 /**
  * Do an end-to-end demonstration of the full system.

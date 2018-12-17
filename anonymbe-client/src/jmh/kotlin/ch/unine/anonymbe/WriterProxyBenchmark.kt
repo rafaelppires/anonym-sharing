@@ -1,6 +1,7 @@
 package ch.unine.anonymbe
 
 import ch.unine.anonymbe.storage.Minio
+import ch.unine.anonymbe.storage.RegularMinio
 import ch.unine.anonymbe.storage.StorageApi
 import ch.unine.anonymbe.storage.WriterProxy
 import org.openjdk.jmh.annotations.*
@@ -31,11 +32,11 @@ open class WriterProxyBenchmark {
         service = when (isThroughProxyString) {
             "true" -> {
                 Cluster.scaleService(Deployment.WRITERPROXY, scale.toInt())
-                WriterProxy(Minio(Deployments.MINIO_URL), Deployments.WRITERPROXY_URL)
+                WriterProxy(RegularMinio(Deployments.MINIO_URL), Deployments.WRITERPROXY_URL)
             }
             "false" -> {
                 Cluster.scaleService(Deployment.WRITERPROXY, 0)
-                Minio(Deployments.MINIO_URL)
+                RegularMinio(Deployments.MINIO_URL)
             }
             else -> throw IllegalArgumentException()
         }

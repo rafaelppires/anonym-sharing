@@ -4,14 +4,8 @@ import io.minio.MinioClient
 import org.xmlpull.v1.XmlPullParserException
 import java.io.InputStream
 
-class Minio(
-    endpoint: String = DEFAULT_ENDPOINT,
-    accessKey: String = DEFAULT_ACCESS_KEY,
-    secretKey: String = DEFAULT_SECRET_KEY
-) : StorageApi {
-    private val client = MinioClient(endpoint, accessKey, secretKey).also {
-        it.ignoreCertCheck()
-    }
+abstract class Minio : StorageApi {
+    protected abstract val client: MinioClient
 
     override fun createBucketIfNotExists(bucketName: String) {
         if (!client.bucketExists(bucketName)) {
@@ -80,7 +74,5 @@ class Minio(
 
     companion object {
         const val DEFAULT_ENDPOINT = "https://hoernli-5.maas:30900"
-        const val DEFAULT_ACCESS_KEY = "access"
-        const val DEFAULT_SECRET_KEY = "secretkey"
     }
 }

@@ -1,14 +1,12 @@
 package ch.unine.anonymbe.api
 
-import okhttp3.ConnectionPool
-import okhttp3.ConnectionSpec
-import okhttp3.OkHttpClient
-import okhttp3.RequestBody
+import okhttp3.*
 import retrofit2.Call
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import retrofit2.create
 import retrofit2.http.*
+import retrofit2.http.Headers
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
@@ -47,6 +45,9 @@ interface WriterProxyApi {
     @PUT("{bucket}/{filename}")
     @Headers("Content-Type: application/octet-stream")
     fun uploadFile(@Path("bucket") bucketName: String, @Path("filename") filename: String, @Body data: RequestBody): Call<Unit>
+
+    @GET("token")
+    fun getToken(): Call<ResponseBody>
 }
 
 object Api {
