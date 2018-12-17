@@ -1,0 +1,11 @@
+--- a/usr/lib/wso2/wso2is/5.7.0/repository/conf/identity/identity.xml	2018-09-13 18:18:08.000000000 +0000
++++ b/usr/lib/wso2/wso2is/5.7.0/repository/conf/identity/identity.xml	2018-12-17 14:52:09.137935574 +0000
+@@ -142,7 +142,7 @@
+              Default: org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl.
+              Applicable values: org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer
+         -->
+-        <!--<IdentityOAuthTokenGenerator>org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer</IdentityOAuthTokenGenerator>-->
++        <IdentityOAuthTokenGenerator>org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer</IdentityOAuthTokenGenerator>
+ 
+         <!-- True, if access token alias is stored in the database instead of access token.
+              Eg. token alias and token is same when default AccessTokenValueGenerator is used.

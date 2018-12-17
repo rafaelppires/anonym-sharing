@@ -91,6 +91,12 @@ spec:
           value: "access"
         - name: MINIO_SECRET_KEY
           value: "secretkey"
+        # URL for WSO2
+        - name: MINIO_IAM_JWKS_URL
+          value: https://hoernli-5.maas:9443/oauth2/jwks
+        # URL for OPA
+        - name: MINIO_IAM_OPA_URL
+          value: http://localhost:8181/v1/data/httpapi/authz
         ports:
         - containerPort: 9000
         # Mount the volume into the pod
@@ -99,6 +105,14 @@ spec:
           mountPath: "/storage"
         - name: secret-volume
           mountPath: /root/.minio/certs
+      - name: opa
+        image: openpolicyagent/opa:0.9.1
+        ports:
+        - containerPort: 8181
+        args:
+        - run
+        - --server
+        - --log-level=debug
 ---
 apiVersion: v1
 kind: Service
