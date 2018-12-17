@@ -10,7 +10,7 @@ abstract class AdminBenchmark {
     @Param(Deployments.ANONYMBE_MONGO_URL) //Deployments.ANONYMBE_MEM_URL
     private var endpointUrl: String = ""
 
-    @Param("1", "2")
+    @Param("1")
     private var scale: String = ""
 
     @Volatile
@@ -37,6 +37,7 @@ abstract class AdminBenchmark {
 
         var tries = 10
         while (tries --> 0 && try {
+                println("Deleting all data")
                 service.deleteAllData().execute().throwExceptionIfNotReallySuccessful()
                 false
             } catch (e: Exception) {
