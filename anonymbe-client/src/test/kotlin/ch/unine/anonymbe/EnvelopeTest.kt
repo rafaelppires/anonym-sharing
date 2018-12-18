@@ -7,6 +7,7 @@ import org.junit.Assert
 import java.util.*
 import kotlin.test.Test
 
+@ExperimentalUnsignedTypes
 class EnvelopeTest {
     @Test
     fun testEnvelope1() {
