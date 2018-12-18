@@ -2,10 +2,11 @@ package ch.unine.anonymbe.client
 
 import ch.unine.anonymbe.api.EnvelopeResult
 import java.nio.ByteBuffer
+import java.security.MessageDigest
 import java.util.*
 import javax.crypto.AEADBadTagException
 
-data class Envelope(private val envelope: ByteArray) {
+open class Envelope(protected val envelope: ByteArray) {
     constructor(envelopeBase64: String) : this(base64Decoder.decode(envelopeBase64))
 
     constructor(envelopeResult: EnvelopeResult) : this(envelopeResult.ciphertext)
@@ -13,7 +14,7 @@ data class Envelope(private val envelope: ByteArray) {
     /**
      * ByteArray that backs this envelope. Do not modify contents!
      */
-    internal val unsafeRaw = envelope
+    internal val unsafeRaw get() = envelope
 
     /**
      * ByteArray that backs this envelope. Safe to use, returns a copy.
@@ -21,7 +22,7 @@ data class Envelope(private val envelope: ByteArray) {
     val raw = envelope.copyOf()
 
     @Throws(Exception::class)
-    fun open(userKey: SymmetricKey): ByteArray {
+    open fun open(userKey: SymmetricKey): ByteArray {
         val envelopeBuffer = ByteBuffer.wrap(envelope)
         val encryptedKey = ByteArray(CIPHER_IV_BYTES + CIPHER_KEY_BYTES + CIPHER_TAG_BYTES)
         var decryptedKey: ByteArray? = null
@@ -51,7 +52,54 @@ data class Envelope(private val envelope: ByteArray) {
 
     override fun hashCode() = envelope.contentHashCode()
 
+    override fun toString(): String {
+        return "Envelope(raw=${Arrays.toString(envelope)})"
+    }
+
     companion object {
-        private val base64Decoder by lazy { Base64.getDecoder() }
+        @JvmStatic
+        protected val base64Decoder: Base64.Decoder by lazy { Base64.getDecoder() }
+    }
+}
+
+class IndexedEnvelope(envelope: ByteArray) : Envelope(envelope) {
+    constructor(envelopeBase64: String) : this(base64Decoder.decode(envelopeBase64))
+
+    constructor(envelopeResult: EnvelopeResult) : this(envelopeResult.ciphertext)
+
+    override fun open(userKey: SymmetricKey): ByteArray {
+        val envelopeBuffer: ByteBuffer = ByteBuffer.wrap(envelope)
+        val encryptedKey = ByteArray(CIPHER_IV_BYTES + CIPHER_KEY_BYTES + CIPHER_TAG_BYTES)
+        val hashedIndex = ByteArray(HASHED_INDEX_BYTES)
+        var decryptedKey: ByteArray? = null
+
+        val hashToFind: ByteArray = digester.digest(ByteArray(NONCE_BYTES + CIPHER_KEY_BYTES).let {
+            envelopeBuffer.get(it, 0, NONCE_BYTES)
+            userKey.encoded.copyInto(it, NONCE_BYTES)
+        })
+
+        while (envelopeBuffer.hasRemaining()) {
+            envelopeBuffer.get(hashedIndex)
+
+            if (hashedIndex contentEquals hashToFind) {
+                envelopeBuffer.get(encryptedKey)
+                decryptedKey = Encryption.decryptAes(encryptedKey, userKey)
+                break
+            } else {
+                envelopeBuffer.position(envelopeBuffer.position() + encryptedKey.size)
+            }
+        }
+
+        if (decryptedKey == null) {
+            throw Exception("User key not in envelope")
+        }
+        return decryptedKey
+    }
+
+    companion object {
+        private const val NONCE_BYTES = 12
+        private const val HASHED_INDEX_BYTES = 28
+
+        private val digester: MessageDigest = MessageDigest.getInstance("SHA-224")
     }
 }
