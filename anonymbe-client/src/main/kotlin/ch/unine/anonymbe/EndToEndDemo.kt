@@ -5,9 +5,7 @@ import ch.unine.anonymbe.api.Api
 import ch.unine.anonymbe.api.User
 import ch.unine.anonymbe.api.UserGroup
 import ch.unine.anonymbe.client.Client
-import ch.unine.anonymbe.storage.Aws
-import ch.unine.anonymbe.storage.Minio
-import ch.unine.anonymbe.storage.WriterProxy
+import ch.unine.anonymbe.storage.HybridTokenAwsMinio
 import java.util.*
 import kotlin.random.Random
 
@@ -16,7 +14,7 @@ fun main(args: Array<String>) {
 }
 
 const val groupId = "endtoend"
-val storageClient = WriterProxy(Minio())
+val storageClient = HybridTokenAwsMinio()
 
 /**
  * Do an end-to-end demonstration of the full system.
@@ -72,5 +70,9 @@ fun endToEndDemo(dummyData: ByteArray): ByteArray = try {
 
     retrievedData
 } finally {
-    storageClient.deleteBucket(groupId)
+    try {
+        storageClient.deleteBucket(groupId)
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
 }

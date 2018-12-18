@@ -33,7 +33,7 @@ spec:
       - name: regcred
       containers:
       - name: writerproxy-container
-        image: sebvaucher/anonymbe:0.26-writerproxy
+        image: sebvaucher/anonymbe:0.32-writerproxy
         args:
         - "./bin/writeproxy"
         - "-m"
@@ -42,6 +42,12 @@ spec:
         - "access"
         - "-k"
         - "secretkey"
+        - "-t"
+        - "hoernli-5.maas:9443"
+        - "-u"
+        - x7nfS68A88FZ4yWOkL7pSJ7yvkIa
+        - "-w"
+        - Nu_yQoDYGiLVxBRAZTSg2hjwX9sa
         stdin: true
         tty: true
         ports:

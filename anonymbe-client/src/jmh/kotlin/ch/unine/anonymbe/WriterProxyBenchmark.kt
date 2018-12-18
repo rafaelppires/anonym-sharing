@@ -66,7 +66,7 @@ open class WriterProxyBenchmark {
     fun uploadFile() {
         val objectName = UUID.randomUUID().toString()
         try {
-            service.storeObject(bucket, objectName, data.inputStream())
+            service.storeObject(bucket, objectName, data)
         } catch (_: Exception) {
             errors++
         }

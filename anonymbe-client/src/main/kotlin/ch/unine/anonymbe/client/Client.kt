@@ -5,7 +5,9 @@ import ch.unine.anonymbe.api.Bucket
 import ch.unine.anonymbe.api.UserApi
 import ch.unine.anonymbe.api.throwExceptionIfNotReallySuccessful
 import ch.unine.anonymbe.storage.StorageApi
-import java.io.*
+import java.io.ByteArrayOutputStream
+import java.io.DataInputStream
+import java.io.DataOutputStream
 import java.util.*
 
 class Client(private val userId: String, apiUrl: String, private val storageClient: StorageApi) {
@@ -34,8 +36,8 @@ class Client(private val userId: String, apiUrl: String, private val storageClie
         objectName: String
     ) {
         storageClient.createBucketIfNotExists(groupName)
-        val (dataToStore, dataLength) = encryptAndEncodeFile(data, envelope, key)
-        putObjectToStorage(dataToStore, dataLength, groupName, objectName)
+        val dataToStore = encryptAndEncodeFile(data, envelope, key)
+        putObjectToStorage(dataToStore, groupName, objectName)
     }
 
     fun retrieveFromCloud(userKey: String, groupId: String, filename: String): ByteArray {
@@ -61,33 +63,31 @@ class Client(private val userId: String, apiUrl: String, private val storageClie
         return Encryption.decryptAes(encryptedData, decryptedKey, envelope.unsafeRaw)
     }
 
-    private fun encryptAndEncodeFile(data: ByteArray, envelope: Envelope, key: SymmetricKey): Pair<InputStream, Long> {
+    private fun encryptAndEncodeFile(data: ByteArray, envelope: Envelope, key: SymmetricKey): ByteArray {
         val binaryEnvelope = envelope.unsafeRaw
         val encryptedData = Encryption.encryptAes(data, key, binaryEnvelope)
 
-        val (envelopeAndData, length) = encodeEnvelopeAndData(binaryEnvelope, encryptedData)
-        return Pair(envelopeAndData, length)
+        return encodeEnvelopeAndData(binaryEnvelope, encryptedData)
     }
 
 
-    private fun encodeEnvelopeAndData(envelope: ByteArray, data: ByteArray): Pair<InputStream, Long> {
-        val encodedEnvelope = ByteArrayOutputStream(Int.SIZE_BYTES + envelope.size)
+    private fun encodeEnvelopeAndData(envelope: ByteArray, data: ByteArray): ByteArray {
+        val encodedEnvelope = ByteArrayOutputStream(Int.SIZE_BYTES + envelope.size + data.size)
         val envelopeDataOutputStream = DataOutputStream(encodedEnvelope)
         envelopeDataOutputStream.writeInt(envelope.size)
         envelopeDataOutputStream.write(envelope)
+        envelopeDataOutputStream.write(data)
+        envelopeDataOutputStream.flush()
 
-        val encodedEnvelopeInputStream = ByteArrayInputStream(encodedEnvelope.toByteArray())
-        val length = Int.SIZE_BYTES.toLong() + envelope.size + data.size
-        return Pair(SequenceInputStream(encodedEnvelopeInputStream, ByteArrayInputStream(data)), length)
+        return encodedEnvelope.toByteArray()
     }
 
     private fun putObjectToStorage(
-        encryptedData: InputStream,
-        dataLength: Long,
+        encryptedData: ByteArray,
         groupName: String,
         objectName: String
     ) {
-        storageClient.storeObject(groupName, objectName, encryptedData, dataLength)
+        storageClient.storeObject(groupName, objectName, encryptedData)
     }
 
     fun verifyEnvelope(userKey: String, envelope: Envelope, expectedContent: ByteArray): Boolean =

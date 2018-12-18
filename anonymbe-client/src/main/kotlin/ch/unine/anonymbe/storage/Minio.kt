@@ -2,6 +2,7 @@ package ch.unine.anonymbe.storage
 
 import io.minio.MinioClient
 import org.xmlpull.v1.XmlPullParserException
+import java.io.ByteArrayInputStream
 import java.io.InputStream
 
 class Minio(
@@ -9,7 +10,7 @@ class Minio(
     accessKey: String = DEFAULT_ACCESS_KEY,
     secretKey: String = DEFAULT_SECRET_KEY
 ) : StorageApi {
-    private val client = MinioClient(endpoint, accessKey, secretKey).also {
+    val client: MinioClient = MinioClient(endpoint, accessKey, secretKey).also {
         it.ignoreCertCheck()
     }
 
@@ -71,9 +72,11 @@ class Minio(
 
     override fun storeObject(
         bucketName: String, objectName: String,
-        data: InputStream, dataLength: Long,
-        mime: String
-    ) = client.putObject(bucketName, objectName, data, dataLength, mime)
+        data: ByteArray, mime: String
+    ) {
+        val inputStream = ByteArrayInputStream(data)
+        client.putObject(bucketName, objectName, inputStream, data.size.toLong(), mime)
+    }
 
     override fun getObject(bucketName: String, objectName: String): InputStream =
         client.getObject(bucketName, objectName)

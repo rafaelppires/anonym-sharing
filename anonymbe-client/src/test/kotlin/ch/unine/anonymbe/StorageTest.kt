@@ -1,16 +1,19 @@
 package ch.unine.anonymbe
 
-import ch.unine.anonymbe.storage.Aws
-import ch.unine.anonymbe.storage.Minio
-import ch.unine.anonymbe.storage.StorageApi
-import ch.unine.anonymbe.storage.WriterProxy
+import ch.unine.anonymbe.storage.*
 import org.junit.Assert
 import java.util.*
 import kotlin.test.Test
 
 class AwsTest : StorageTest() {
     override val storageClient by lazy {
-        Aws()
+        RegularAws()
+    }
+}
+
+class TokenAwsTest : StorageTest() {
+    override val storageClient by lazy {
+        TokenAws()
     }
 }
 
@@ -22,13 +25,19 @@ class MinioTest : StorageTest() {
 
 class WriterProxyAwsTest : StorageTest() {
     override val storageClient by lazy {
-        WriterProxy(Aws())
+        WriterProxy(RegularAws())
     }
 }
 
-class WriterProxyMinioTest : StorageTest() {
+class WriterProxyRegularMinioTest : StorageTest() {
     override val storageClient by lazy {
         WriterProxy(Minio())
+    }
+}
+
+class HybridTokenAwsMinioTest : StorageTest() {
+    override val storageClient by lazy {
+        HybridTokenAwsMinio()
     }
 }
 
@@ -43,9 +52,10 @@ abstract class StorageTest {
         val filename = UUID.randomUUID().toString()
         println("UUID = $filename")
 
-        storageClient.createBucketIfNotExists("bucket")
-        storageClient.storeObject("bucket", filename, data.inputStream(), data.size.toLong())
-        val retrievedData = storageClient.getObject("bucket", filename).readAllBytes()
+        val bucketName = "newbucket"
+        storageClient.createBucketIfNotExists(bucketName)
+        storageClient.storeObject(bucketName, filename, data)
+        val retrievedData = storageClient.getObject(bucketName, filename).readAllBytes()
         Assert.assertArrayEquals(data, retrievedData)
     }
 }

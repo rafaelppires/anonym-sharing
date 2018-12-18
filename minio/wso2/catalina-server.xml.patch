@@ -1,0 +1,11 @@
+--- a/usr/lib/wso2/wso2is/5.7/repository/conf/tomcat/catalina-server.xml	2018-12-17 15:34:35.872319133 +0000
++++ b/usr/lib/wso2/wso2is/5.7/repository/conf/tomcat/catalina-server.xml	2018-12-17 15:34:18.002119525 +0000
+@@ -65,7 +65,7 @@
+                    maxKeepAliveRequests="200"
+                    acceptCount="200"
+                    server="WSO2 Carbon Server"
+-                   clientAuth="want"
++                   clientAuth="false"
+                    compression="on"
+                    scheme="https"
+                    secure="true"
