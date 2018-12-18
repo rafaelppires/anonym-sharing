@@ -9,8 +9,7 @@ interface StorageApi {
 
     fun storeObject(
         bucketName: String, objectName: String,
-        data: InputStream, dataLength: Long = data.available().toLong(),
-        mime: String = "application/octet-stream"
+        data: ByteArray, mime: String = "application/octet-stream"
     )
 
     fun getObject(bucketName: String, objectName: String): InputStream

@@ -53,8 +53,8 @@ dependencies {
 
     kapt("com.squareup.moshi:moshi-kotlin-codegen:1.7.0")
 
-    compile("software.amazon.awssdk:s3:2.1.3")
-    compile("software.amazon.awssdk:apache-client:2.1.3")
+    compile("software.amazon.awssdk:s3:2.2.0")
+    compile("software.amazon.awssdk:apache-client:2.2.0")
     compile("org.apache.logging.log4j:log4j-core:2.11.1")
     compile("org.apache.logging.log4j:log4j-api:2.11.1")
     compile("org.apache.logging.log4j:log4j-slf4j-impl:2.11.1")

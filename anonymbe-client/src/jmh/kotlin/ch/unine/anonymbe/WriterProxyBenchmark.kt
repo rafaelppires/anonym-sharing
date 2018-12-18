@@ -1,7 +1,6 @@
 package ch.unine.anonymbe
 
 import ch.unine.anonymbe.storage.Minio
-import ch.unine.anonymbe.storage.RegularMinio
 import ch.unine.anonymbe.storage.StorageApi
 import ch.unine.anonymbe.storage.WriterProxy
 import org.openjdk.jmh.annotations.*
@@ -32,11 +31,11 @@ open class WriterProxyBenchmark {
         service = when (isThroughProxyString) {
             "true" -> {
                 Cluster.scaleService(Deployment.WRITERPROXY, scale.toInt())
-                WriterProxy(RegularMinio(Deployments.MINIO_URL), Deployments.WRITERPROXY_URL)
+                WriterProxy(Minio(Deployments.MINIO_URL), Deployments.WRITERPROXY_URL)
             }
             "false" -> {
                 Cluster.scaleService(Deployment.WRITERPROXY, 0)
-                RegularMinio(Deployments.MINIO_URL)
+                Minio(Deployments.MINIO_URL)
             }
             else -> throw IllegalArgumentException()
         }
@@ -67,7 +66,7 @@ open class WriterProxyBenchmark {
     fun uploadFile() {
         val objectName = UUID.randomUUID().toString()
         try {
-            service.storeObject(bucket, objectName, data.inputStream())
+            service.storeObject(bucket, objectName, data)
         } catch (_: Exception) {
             errors++
         }

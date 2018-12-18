@@ -3,11 +3,14 @@ package ch.unine.anonymbe.storage
 import ch.unine.anonymbe.api.Api
 import ch.unine.anonymbe.api.WriterProxyApi
 import ch.unine.anonymbe.api.throwExceptionIfNotSuccessful
-import io.minio.MinioClient
 import org.w3c.dom.Element
+import software.amazon.awssdk.auth.credentials.AwsSessionCredentials
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
+import software.amazon.awssdk.regions.Region
+import software.amazon.awssdk.services.s3.S3Client
 import java.io.InputStream
+import java.net.URI
 import java.time.Instant
-import java.time.LocalDateTime
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.xpath.XPathFactory
 
@@ -34,11 +37,13 @@ import javax.xml.xpath.XPathFactory
 data class TempToken(
     val access: String,
     val secret: String,
+    val session: String,
     val expiration: Instant
 ) {
     constructor(document: Element) : this(
         accessXpath.evaluate(document),
         secretXpath.evaluate(document),
+        sessionXpath.evaluate(document),
         Instant.parse(expirationXpath.evaluate(document))
     )
 
@@ -53,23 +58,25 @@ data class TempToken(
             "/AssumeRoleWithClientGrantsResponse/AssumeRoleWithClientGrantsResult/Credentials"
         private const val ACCESS_XPATH_EXPR = "$BASE_XPATH_EXPR/AccessKeyId"
         private const val SECRET_XPATH_EXPR = "$BASE_XPATH_EXPR/SecretAccessKey"
+        private const val SESSION_XPATH_EXPR = "$BASE_XPATH_EXPR/SessionToken"
         private const val EXPIRATION_XPATH_EXPR = "$BASE_XPATH_EXPR/Expiration"
         private val xpath = XPathFactory.newInstance().newXPath()
         private val accessXpath = xpath.compile(ACCESS_XPATH_EXPR)
         private val secretXpath = xpath.compile(SECRET_XPATH_EXPR)
+        private val sessionXpath = xpath.compile(SESSION_XPATH_EXPR)
         private val expirationXpath = xpath.compile(EXPIRATION_XPATH_EXPR)
     }
 }
 
-class TokenMinio(
-    private val minioEndpoint: String = Minio.DEFAULT_ENDPOINT,
+class TokenAws(
+    private val awsEndpoint: String = DEFAULT_ENDPOINT,
     writerProxyEndpoint: String = WriterProxy.DEFAULT_URL
-) : Minio() {
+) : Aws() {
     private val writerProxyApi: WriterProxyApi = Api.build(writerProxyEndpoint)
     private var token: TempToken? = null
-    private var _client: MinioClient? = null
+    private var _client: S3Client? = null
 
-    override val client: MinioClient
+    override val client: S3Client
         get() {
             val currentClient = _client
             val isNewToken = ensureToken()
@@ -77,9 +84,15 @@ class TokenMinio(
                 currentClient
             } else {
                 val token = token!!
-                val newClient = MinioClient(minioEndpoint, token.access, token.secret).also {
-                    it.ignoreCertCheck()
-                }
+                val newClient = S3Client.builder()
+                    .endpointOverride(URI.create(awsEndpoint))
+                    .region(Region.US_EAST_1)
+                    .serviceConfiguration { it.pathStyleAccessEnabled(true) }
+                    .httpClient(httpClient)
+                    .credentialsProvider(StaticCredentialsProvider.create(
+                        AwsSessionCredentials.create(token.access, token.secret, token.session)
+                    ))
+                    .build()
                 _client = newClient
                 newClient
             }

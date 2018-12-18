@@ -2,10 +2,17 @@ package ch.unine.anonymbe.storage
 
 import io.minio.MinioClient
 import org.xmlpull.v1.XmlPullParserException
+import java.io.ByteArrayInputStream
 import java.io.InputStream
 
-abstract class Minio : StorageApi {
-    protected abstract val client: MinioClient
+class Minio(
+    endpoint: String = DEFAULT_ENDPOINT,
+    accessKey: String = DEFAULT_ACCESS_KEY,
+    secretKey: String = DEFAULT_SECRET_KEY
+) : StorageApi {
+    val client: MinioClient = MinioClient(endpoint, accessKey, secretKey).also {
+        it.ignoreCertCheck()
+    }
 
     override fun createBucketIfNotExists(bucketName: String) {
         if (!client.bucketExists(bucketName)) {
@@ -65,14 +72,18 @@ abstract class Minio : StorageApi {
 
     override fun storeObject(
         bucketName: String, objectName: String,
-        data: InputStream, dataLength: Long,
-        mime: String
-    ) = client.putObject(bucketName, objectName, data, dataLength, mime)
+        data: ByteArray, mime: String
+    ) {
+        val inputStream = ByteArrayInputStream(data)
+        client.putObject(bucketName, objectName, inputStream, data.size.toLong(), mime)
+    }
 
     override fun getObject(bucketName: String, objectName: String): InputStream =
         client.getObject(bucketName, objectName)
 
     companion object {
         const val DEFAULT_ENDPOINT = "https://hoernli-5.maas:30900"
+        const val DEFAULT_ACCESS_KEY = "access"
+        const val DEFAULT_SECRET_KEY = "secretkey"
     }
 }

@@ -7,31 +7,37 @@ import kotlin.test.Test
 
 class AwsTest : StorageTest() {
     override val storageClient by lazy {
-        Aws()
+        RegularAws()
     }
 }
 
-class RegularMinioTest : StorageTest() {
+class TokenAwsTest : StorageTest() {
     override val storageClient by lazy {
-        RegularMinio()
+        TokenAws()
     }
 }
 
-class TokenMinioTest : StorageTest() {
+class MinioTest : StorageTest() {
     override val storageClient by lazy {
-        TokenMinio()
+        Minio()
     }
 }
 
 class WriterProxyAwsTest : StorageTest() {
     override val storageClient by lazy {
-        WriterProxy(Aws())
+        WriterProxy(RegularAws())
     }
 }
 
 class WriterProxyRegularMinioTest : StorageTest() {
     override val storageClient by lazy {
-        WriterProxy(RegularMinio())
+        WriterProxy(Minio())
+    }
+}
+
+class HybridTokenAwsMinioTest : StorageTest() {
+    override val storageClient by lazy {
+        HybridTokenAwsMinio()
     }
 }
 
@@ -46,9 +52,10 @@ abstract class StorageTest {
         val filename = UUID.randomUUID().toString()
         println("UUID = $filename")
 
-        storageClient.createBucketIfNotExists("bucket")
-        storageClient.storeObject("bucket", filename, data.inputStream(), data.size.toLong())
-        val retrievedData = storageClient.getObject("bucket", filename).readAllBytes()
+        val bucketName = "newbucket"
+        storageClient.createBucketIfNotExists(bucketName)
+        storageClient.storeObject(bucketName, filename, data)
+        val retrievedData = storageClient.getObject(bucketName, filename).readAllBytes()
         Assert.assertArrayEquals(data, retrievedData)
     }
 }

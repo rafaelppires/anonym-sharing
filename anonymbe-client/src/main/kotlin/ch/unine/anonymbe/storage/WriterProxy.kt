@@ -5,7 +5,6 @@ import ch.unine.anonymbe.api.WriterProxyApi
 import ch.unine.anonymbe.api.throwExceptionIfNotSuccessful
 import okhttp3.MediaType
 import okhttp3.RequestBody
-import java.io.InputStream
 
 class WriterProxy(private val storageApi: StorageApi, writerProxyUrl: String = DEFAULT_URL) : StorageApi {
     private val writerProxy: WriterProxyApi = Api.build(writerProxyUrl)
@@ -21,12 +20,10 @@ class WriterProxy(private val storageApi: StorageApi, writerProxyUrl: String = D
     override fun storeObject(
         bucketName: String,
         objectName: String,
-        data: InputStream,
-        dataLength: Long,
+        data: ByteArray,
         mime: String
     ) {
-        val dataBytes = data.readNBytes(dataLength.toInt())
-        val requestBody = RequestBody.create(MediaType.get(mime), dataBytes)
+        val requestBody = RequestBody.create(MediaType.get(mime), data)
 
         writerProxy.uploadFile(bucketName, objectName, requestBody).execute().throwExceptionIfNotSuccessful()
     }
