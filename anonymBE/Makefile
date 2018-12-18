@@ -153,9 +153,6 @@ $(BinDir)/writeproxy : $(BinDir)/% : $(ObjDir)/%.o $(WriterProxyObjs) | $(BinDir
 $(BinDir)/$(SysName) : $(ObjDir)/$(SysName).o $(NatvObjs) | $(BinDir)
 	@$(call run_and_test,$(CXX) $(Natv_CXXFlags) -o $@ $^ $(App_Link_Flags),"Link")
 
-$(ObjDir)/writeproxy.o : $(SrcDir)/writerproxy/writeproxy.cpp | $(ObjDir)
-	@$(call run_and_test,$(CXX) $(Natv_CXXFlags) $(NatvInclude) -c -o $@ $<,"CXX")
-
 $(ObjDir)/%.o : $(SrcDir)/%.cpp | $(ObjDir)
 	@$(call run_and_test,$(CXX) $(Natv_CXXFlags) $(NatvInclude) -c -o $@ $<,"CXX")
 

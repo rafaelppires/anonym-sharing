@@ -17,13 +17,18 @@ std::basic_ostream<char> cout;
 WriterProxy writerproxy;
 //------------------------------------------------------------------------------
 int ecall_init(struct Arguments args) {
+    args.minioendpoint[sizeof(args.minioendpoint) - 1] =
+        args.miniosecret[sizeof(args.miniosecret) - 1] =
+            args.minioaccesskey[sizeof(args.minioaccesskey) - 1] =
+                args.tokenuser[sizeof(args.tokenuser) - 1] =
+                    args.tokenpass[sizeof(args.tokenpass) - 1] =
+                        args.tokenendpoint[sizeof(args.tokenendpoint) - 1] =
+                            args.amendpoint[sizeof(args.amendpoint) - 1] = '\0';
     return writerproxy.init(args);
 }
 
 //------------------------------------------------------------------------------
-void ecall_finish() {
-    writerproxy.finish();
-}
+void ecall_finish() { writerproxy.finish(); }
 
 //------------------------------------------------------------------------------
 int ecall_tls_accept(int fd) { return IncomeSSLConnection::addConnection(fd); }
