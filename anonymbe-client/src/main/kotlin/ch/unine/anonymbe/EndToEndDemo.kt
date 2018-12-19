@@ -5,6 +5,7 @@ import ch.unine.anonymbe.api.Api
 import ch.unine.anonymbe.api.User
 import ch.unine.anonymbe.api.UserGroup
 import ch.unine.anonymbe.client.Client
+import ch.unine.anonymbe.client.IndexedEnvelope
 import ch.unine.anonymbe.storage.HybridTokenAwsMinio
 import java.util.*
 import kotlin.random.Random
@@ -15,6 +16,8 @@ fun main(args: Array<String>) {
 
 const val groupId = "endtoend"
 val storageClient = HybridTokenAwsMinio()
+
+typealias EnvelopeClass = IndexedEnvelope
 
 /**
  * Do an end-to-end demonstration of the full system.
@@ -44,7 +47,7 @@ fun endToEndDemo(dummyData: ByteArray): ByteArray = try {
 
     println("Admin part done")
 
-    val client = Client(userId, Api.DEFAULT_URL, storageClient)
+    val client = Client(userId, Api.DEFAULT_URL, storageClient) { EnvelopeClass(it) }
 
     println("Generating symmetric key and asking refmon for envelope")
     val (symmetricKey, envelope) = client.generateSymmetricKeyAndGetEnvelope(groupId)

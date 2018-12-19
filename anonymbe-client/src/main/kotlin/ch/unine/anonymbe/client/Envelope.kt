@@ -1,6 +1,5 @@
 package ch.unine.anonymbe.client
 
-import ch.unine.anonymbe.api.EnvelopeResult
 import java.nio.ByteBuffer
 import java.security.MessageDigest
 import java.util.*
@@ -20,10 +19,6 @@ internal operator fun ByteArray.compareTo(other: ByteArray): Int {
 }
 
 open class Envelope(protected val envelope: ByteArray) {
-    constructor(envelopeBase64: String) : this(base64Decoder.decode(envelopeBase64))
-
-    constructor(envelopeResult: EnvelopeResult) : this(envelopeResult.ciphertext)
-
     /**
      * ByteArray that backs this envelope. Do not modify contents!
      */
@@ -70,17 +65,11 @@ open class Envelope(protected val envelope: ByteArray) {
     }
 
     companion object {
-        @JvmStatic
-        protected val base64Decoder: Base64.Decoder by lazy { Base64.getDecoder() }
         internal const val ENCRYPTED_KEY_BYTES = CIPHER_IV_BYTES + CIPHER_KEY_BYTES + CIPHER_TAG_BYTES
     }
 }
 
 class IndexedEnvelope(envelope: ByteArray) : Envelope(envelope) {
-    constructor(envelopeBase64: String) : this(base64Decoder.decode(envelopeBase64))
-
-    constructor(envelopeResult: EnvelopeResult) : this(envelopeResult.ciphertext)
-
     @ExperimentalUnsignedTypes
     override fun open(userKey: SymmetricKey): ByteArray {
         val hashToFind: ByteArray = digester.digest(ByteArray(NONCE_BYTES + CIPHER_KEY_BYTES).let {
