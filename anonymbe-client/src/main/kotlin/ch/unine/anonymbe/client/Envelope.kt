@@ -27,29 +27,23 @@ open class Envelope(protected val envelope: ByteArray) {
     /**
      * ByteArray that backs this envelope. Safe to use, returns a copy.
      */
-    val raw = envelope.copyOf()
+    val raw get() = envelope.copyOf()
 
     @Throws(Exception::class)
     open fun open(userKey: SymmetricKey): ByteArray {
         val envelopeBuffer = ByteBuffer.wrap(envelope)
         val encryptedKey = ByteArray(ENCRYPTED_KEY_BYTES)
-        var decryptedKey: ByteArray? = null
 
         while (envelopeBuffer.hasRemaining()) {
             envelopeBuffer.get(encryptedKey)
 
             try {
-                decryptedKey = Encryption.decryptAes(encryptedKey, userKey)
-                break
+                return Encryption.decryptAes(encryptedKey, userKey)
             } catch (e: AEADBadTagException) {
                 continue
             }
         }
-
-        if (decryptedKey == null) {
-            throw Exception("User key not in envelope")
-        }
-        return decryptedKey
+        throw Exception("User key not in envelope")
     }
 
     override fun equals(other: Any?): Boolean = when {
@@ -72,24 +66,19 @@ open class Envelope(protected val envelope: ByteArray) {
 class IndexedEnvelope(envelope: ByteArray) : Envelope(envelope) {
     @ExperimentalUnsignedTypes
     override fun open(userKey: SymmetricKey): ByteArray {
-        val hashToFind: ByteArray = digester.digest(ByteArray(NONCE_BYTES + CIPHER_KEY_BYTES).let {
+        val hashToFind: ByteArray = digester.digest(ByteArray(NONCE_BYTES + CIPHER_KEY_BYTES).also {
             envelope.copyInto(it, endIndex = NONCE_BYTES)
             userKey.encoded.copyInto(it, NONCE_BYTES)
         })
 
         // Get a ByteBuffer that starts where the keys start
-        val envelopeBuffer: ByteBuffer = ByteBuffer.wrap(envelope).let {
-            it.position(NONCE_BYTES)
-            it.slice()
-        }
+        val envelopeBuffer: ByteBuffer = ByteBuffer.wrap(envelope).position(NONCE_BYTES).slice()
 
-        // Buffers
-        val encryptedKey = ByteArray(ENCRYPTED_KEY_BYTES)
+        // Buffer for loop
         val hashedIndex = ByteArray(HASHED_INDEX_BYTES)
-        var decryptedKey: ByteArray? = null
 
-        var left = 0
         assert(envelopeBuffer.remaining() % INDEXED_ENCRYPTED_KEY_BYTES == 0)
+        var left = 0
         var right = (envelopeBuffer.remaining() / INDEXED_ENCRYPTED_KEY_BYTES) - 1
         while (left <= right) {
             val currentIndex = left + (right - left) / 2
@@ -97,21 +86,17 @@ class IndexedEnvelope(envelope: ByteArray) : Envelope(envelope) {
 
             envelopeBuffer.get(hashedIndex)
 
-            if (hashedIndex contentEquals hashToFind) {
-                envelopeBuffer.get(encryptedKey)
-                decryptedKey = Encryption.decryptAes(encryptedKey, userKey)
-                break
-            } else if (hashedIndex < hashToFind) {
-                left++
-            } else {
-                right--
+            when {
+                hashedIndex contentEquals hashToFind -> return Encryption.decryptAes(
+                    ByteArray(ENCRYPTED_KEY_BYTES).also { envelopeBuffer.get(it) },
+                    userKey
+                )
+                hashedIndex < hashToFind -> left++
+                else -> right--
             }
         }
 
-        if (decryptedKey == null) {
-            throw Exception("User key not in envelope")
-        }
-        return decryptedKey
+        throw Exception("User key not in envelope")
     }
 
     companion object {
