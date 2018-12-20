@@ -2,6 +2,8 @@ package ch.unine.anonymbe
 
 import ch.unine.anonymbe.Deployments.ANONYMBE_MEM_URL
 import ch.unine.anonymbe.Deployments.ANONYMBE_MONGO_URL
+import ch.unine.anonymbe.Deployments.NGINX_URL
+import ch.unine.anonymbe.Deployments.WRITERPROXY_TOKEN_URL
 import ch.unine.anonymbe.Deployments.WRITERPROXY_URL
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -10,13 +12,18 @@ object Deployments {
     const val ANONYMBE_MONGO_URL = "https://hoernli-4.maas:30444/"
     const val ANONYMBE_MEM_URL = "https://hoernli-4.maas:30445/"
     const val WRITERPROXY_URL = "https://hoernli-4.maas:30555/"
+    const val WRITERPROXY_TOKEN_URL = "https://hoernli-4.maas:30556/"
     const val MINIO_URL = "https://hoernli-5.maas:30900/"
+    const val NGINX_URL = "https://hoernli-4.maas:30700"
 }
 
 enum class Deployment(val deploymentName: String, val apiUrl: String) {
     ANONYMBE_MONGO("anonymbe", ANONYMBE_MONGO_URL),
     ANONYMBE_MEM("anonymbe-mem", ANONYMBE_MEM_URL),
-    WRITERPROXY("writerproxy", WRITERPROXY_URL);
+    WRITERPROXY("writerproxy", WRITERPROXY_URL),
+    WRITERPROXY_TOKEN("writerproxy-token", WRITERPROXY_TOKEN_URL),
+    NGINX("nginx", NGINX_URL);
+
 
     companion object {
         fun fromUrl(url: String): Deployment {

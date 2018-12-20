@@ -1,5 +1,6 @@
 package ch.unine.anonymbe
 
+import ch.unine.anonymbe.storage.HybridTokenAwsMinio
 import ch.unine.anonymbe.storage.Minio
 import ch.unine.anonymbe.storage.StorageApi
 import ch.unine.anonymbe.storage.WriterProxy
@@ -11,6 +12,9 @@ import kotlin.random.Random
 open class WriterProxyBenchmark {
     @Param("true", "false")
     private var isThroughProxyString: String = ""
+
+    @Param("true", "false")
+    private var isTokenAccess: String = ""
 
     @Param("1024", "10240", "102400", "1024000")
     private var dataSizeBytes: String = ""
@@ -28,14 +32,31 @@ open class WriterProxyBenchmark {
 
     @Setup(Level.Trial)
     fun setup() {
-        service = when (isThroughProxyString) {
-            "true" -> {
-                Cluster.scaleService(Deployment.WRITERPROXY, scale.toInt())
+        service = when {
+            isThroughProxyString == "true" && isTokenAccess == "false" -> {
+                val scale = scale.toInt()
+                assert(scale > 0)
+                Cluster.scaleService(Deployment.WRITERPROXY, scale)
+                Cluster.scaleService(Deployment.WRITERPROXY_TOKEN, 0)
+                Cluster.scaleService(Deployment.NGINX, 0)
                 WriterProxy(Minio(Deployments.MINIO_URL), Deployments.WRITERPROXY_URL)
             }
-            "false" -> {
+            isThroughProxyString == "false" && isTokenAccess == "false" -> {
                 Cluster.scaleService(Deployment.WRITERPROXY, 0)
+                Cluster.scaleService(Deployment.WRITERPROXY_TOKEN, 0)
+                Cluster.scaleService(Deployment.NGINX, 0)
                 Minio(Deployments.MINIO_URL)
+            }
+            isThroughProxyString == "false" && isTokenAccess == "true" -> {
+                val scale = scale.toInt()
+                assert(scale > 0)
+                Cluster.scaleService(Deployment.WRITERPROXY, 0)
+                Cluster.scaleService(Deployment.WRITERPROXY_TOKEN, scale)
+                Cluster.scaleService(Deployment.NGINX, 1)
+                HybridTokenAwsMinio(
+                    minioEndpoint = Deployments.NGINX_URL,
+                    writerProxyEndpoint = Deployments.WRITERPROXY_TOKEN_URL
+                )
             }
             else -> throw IllegalArgumentException()
         }
@@ -52,6 +73,8 @@ open class WriterProxyBenchmark {
     @TearDown(Level.Trial)
     fun tearDown() {
         Cluster.scaleService(Deployment.WRITERPROXY, 0)
+        Cluster.scaleService(Deployment.WRITERPROXY_TOKEN, 0)
+        Cluster.scaleService(Deployment.NGINX, 1)
     }
 
     @TearDown(Level.Iteration)
