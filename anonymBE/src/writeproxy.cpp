@@ -22,6 +22,8 @@ static struct argp_option options[] = {
     {"tokenuser", 'u', "USERNAME", 0, "Username of identity server"},
     {"tokenpass", 'w', "PASSWORD", 0, "Password of identity server"},
     {"tokenendpoint", 't', "host:port", 0, "Identity server endpoint"},
+    {"amendpoint", 'e', "host:port", 0, "Access Monitor (anonymbe) endpoint. "
+                                        "When user rights should be checked"},
     {0}};
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state) {
@@ -49,6 +51,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
         case 't':
             strncpy(args->tokenendpoint, arg, sizeof(args->tokenendpoint) - 1);
             break;
+        case 'e':
+            strncpy(args->amendpoint, arg, sizeof(args->amendpoint) - 1);
+            break;
         default:
             return ARGP_ERR_UNKNOWN;
     };
@@ -64,6 +69,7 @@ void init_args(Arguments *args) {
     memset(args->tokenuser, 0, sizeof(args->tokenuser));
     memset(args->tokenpass, 0, sizeof(args->tokenpass));
     memset(args->tokenendpoint, 0, sizeof(args->tokenendpoint));
+    memset(args->amendpoint, 0, sizeof(args->amendpoint));
 }
 
 #include <sgxserver_bootstrap.cpp>

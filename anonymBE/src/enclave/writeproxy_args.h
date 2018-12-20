@@ -13,7 +13,8 @@ struct Arguments {
          minioaccesskey[100],
          tokenuser[100],
          tokenpass[100],
-         tokenendpoint[100];
+         tokenendpoint[100],
+         amendpoint[100];
 };
 #ifdef __cplusplus
 }

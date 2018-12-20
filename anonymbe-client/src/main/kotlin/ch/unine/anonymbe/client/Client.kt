@@ -10,7 +10,12 @@ import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.util.*
 
-class Client(private val userId: String, apiUrl: String, private val storageClient: StorageApi) {
+class Client(
+    private val userId: String,
+    apiUrl: String,
+    private val storageClient: StorageApi,
+    private inline val envelopeProvider: (ByteArray) -> Envelope
+) {
     private val apiClient: UserApi = Api.build(apiUrl)
     private val b64Encoder: Base64.Encoder = Base64.getEncoder()
     private val b64Decoder: Base64.Decoder = Base64.getDecoder()
@@ -22,7 +27,7 @@ class Client(private val userId: String, apiUrl: String, private val storageClie
         envelopeCall.throwExceptionIfNotReallySuccessful()
 
         val envelope = envelopeCall.body()?.let {
-            Envelope(it)
+            envelopeProvider(b64Decoder.decode(it.ciphertext))
         } ?: throw NullPointerException("Envelope body is null")
 
         return Pair(key, envelope)
@@ -44,7 +49,7 @@ class Client(private val userId: String, apiUrl: String, private val storageClie
         val inputStream = DataInputStream(storageClient.getObject(groupId, filename))
         val envelopeLength = inputStream.readInt()
 
-        val envelope = Envelope(inputStream.readNBytes(envelopeLength))
+        val envelope = envelopeProvider(inputStream.readNBytes(envelopeLength))
         val encryptedData = inputStream.readAllBytes()
         inputStream.close()
 

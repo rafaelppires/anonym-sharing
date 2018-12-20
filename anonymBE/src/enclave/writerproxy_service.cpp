@@ -28,24 +28,33 @@ int WriterProxy::init(Arguments args) {
         return -1;
     }
 
-    std::string endpoint(args.minioendpoint);
-    if (endpoint.find("http") == 0) {
-        printf("Minio endpoint must be specified as <host>:<port>\n");
+    tuser_ = std::string(args.tokenuser);
+    tpass_ = std::string(args.tokenpass);
+    std::string token_endpoint(args.tokenendpoint),
+        minio_endpoint(args.minioendpoint), anonymbe_endpoint(args.amendpoint);
+    if (minio_endpoint.find("http") == 0 ||
+        anonymbe_endpoint.find("http") == 0 ||
+        token_endpoint.find("http") == 0) {
+        printf("Endpoints must be specified as <host>:<port>\n");
         return -2;
     }
 
-    args.tokenuser[sizeof(args.tokenuser) - 1] =
-        args.tokenpass[sizeof(args.tokenpass) - 1] =
-            args.tokenendpoint[sizeof(args.tokenendpoint) - 1] = '\0';
-    tuser_ = std::string(args.tokenuser);
-    tpass_ = std::string(args.tokenpass);
-    std::string tendp(args.tokenendpoint);
-    if (tendp.empty() != tuser_.empty() || tendp.empty() != tpass_.empty()) {
+    if (token_endpoint.empty() != tuser_.empty() ||
+        token_endpoint.empty() != tpass_.empty()) {
         printf(
             "Either none or all 3 Identity Server parameters must be given\n");
         return -3;
-    } else if (!tendp.empty()) {
-        isendpoint_ = HttpUrl::parse("https://" + tendp);
+    } else if (!token_endpoint.empty()) {
+        isendpoint_ = HttpUrl::parse("https://" + token_endpoint);
+    }
+
+    if (!anonymbe_endpoint.empty()) {
+        amendpoint_ = HttpUrl::parse("https://" + anonymbe_endpoint);
+        if (!amconnection_.connect(amendpoint_.host(), amendpoint_.port())) {
+            printf("Could not connect to Access Monitor (anonymbe) @%s\n",
+                   anonymbe_endpoint.c_str());
+            exit(1);
+        }
     }
 
     IncomeSSLConnection::init();
@@ -53,7 +62,7 @@ int WriterProxy::init(Arguments args) {
         .set("Server", "A-SKY WriterProxy");
     response_builder.protocol(HttpStrings::http11).headers(header_builder);
 
-    std::string minioedp = "https://" + endpoint;
+    std::string minioedp = "https://" + minio_endpoint;
     minioendpoint_ = HttpUrl::parse(minioedp);
     try {
         minioClient =
@@ -61,7 +70,7 @@ int WriterProxy::init(Arguments args) {
         // minioClient->traceOn(cout);
     } catch (const std::exception &e) {
         printf("%s\n", e.what());
-        exit(1);
+        exit(2);
     }
     return 0;
 }
@@ -82,7 +91,27 @@ Response WriterProxy::treat_request(const Request &request) {
 }
 
 //------------------------------------------------------------------------------
+bool WriterProxy::check_user() {
+    if (amendpoint_.port() > 0) {
+        RequestBuilder req;
+        req.method("GET")
+            .url(HttpUrl::parse("http://0:0/ping"))
+            .protocol(HttpStrings::http11)
+            .header("Host", amendpoint_.host() + ":" +
+                                std::to_string(amendpoint_.port()));
+        std::string ping = req.build().toString();
+        amconnection_.send(ping.data(), ping.size());
+        char buff[500];
+        memset(buff, 0, sizeof(buff));
+        amconnection_.recv(buff, sizeof(buff));
+    }
+    return true;
+}
+
+//------------------------------------------------------------------------------
 Response WriterProxy::forward(const Request &request) {
+    if (!check_user())
+        return response_builder.code(401).message("Unauthorized");
     try {
         minioClient->forwardObject(request);
     } catch (const ErrorResponseException &e) {
@@ -131,7 +160,7 @@ std::string WriterProxy::request_reply(const HttpUrl &endpoint,
     if (!connection.connect(endpoint.host(), endpoint.port())) throw error;
 
     std::string reqstr = request.toString();
-    //printf("+%s+\n", reqstr.c_str());
+    // printf("+%s+\n", reqstr.c_str());
     if (connection.send(reqstr.data(), reqstr.size()) <= 0) throw error;
 
     Http1Decoder decoder;
@@ -140,7 +169,7 @@ std::string WriterProxy::request_reply(const HttpUrl &endpoint,
         int len = connection.recv(buff, sizeof(buff));
         if (len < 0) throw error;
         std::string reply(buff, len);
-        //printf("(%s)\n", reply.c_str());
+        // printf("(%s)\n", reply.c_str());
         decoder.addChunk(reply);
     } while (!decoder.responseReady());
 
@@ -153,6 +182,8 @@ std::string WriterProxy::request_reply(const HttpUrl &endpoint,
 
 //------------------------------------------------------------------------------
 Response WriterProxy::generate_token(const Request &request) {
+    if (!check_user())
+        return response_builder.code(401).message("Unauthorized");
     RequestBuilder req;
     req.method("POST")
         .url(HttpUrl::parse("http://0:0/oauth2/token"))
