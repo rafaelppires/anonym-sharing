@@ -19,7 +19,7 @@ data:
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: nginx-deployment
+  name: nginx
 spec:
   strategy:
     type: Recreate
@@ -43,7 +43,13 @@ spec:
           mountPath: /etc/nginx/nginx.conf
           subPath: nginx.conf
         ports:
-        - containerPort: 7070
+        - name: proxy-port
+          containerPort: 7070
+        readinessProbe:
+          tcpSocket:
+            port: proxy-port
+          initialDelaySeconds: 2
+          periodSeconds: 2
 ---
 apiVersion: v1
 kind: Service
