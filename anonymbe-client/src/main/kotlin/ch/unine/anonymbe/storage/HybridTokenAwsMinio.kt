@@ -11,7 +11,7 @@ class HybridTokenAwsMinio(
 
     override fun createBucketIfNotExists(bucketName: String) = aws.createBucketIfNotExists(bucketName)
 
-    override fun deleteBucket(bucketName: String) = aws.deleteBucket(bucketName)
+    override fun deleteBucket(bucketName: String) = minio.deleteBucket(bucketName)
 
     override fun storeObject(
         bucketName: String,

@@ -1,32 +1,32 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: writerproxy-service
+  name: writerproxy-token-service
   labels:
-    name: writerproxy
+    name: writerproxy-token
 spec:
   type: NodePort
   ports:
   - port: 4445
     targetPort: 4445
-    nodePort: 30555
+    nodePort: 30556
   selector:
-    role: writerproxy
+    role: writerproxy-token
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: writerproxy
+  name: writerproxy-token
 spec:
   selector:
     matchLabels:
-      role: writerproxy
+      role: writerproxy-token
   replicas: 1
   revisionHistoryLimit: 1
   template:
     metadata:
       labels:
-        role: writerproxy
+        role: writerproxy-token
     spec:
       terminationGracePeriodSeconds: 10
       imagePullSecrets:
@@ -42,6 +42,12 @@ spec:
         - "access"
         - "-k"
         - "secretkey"
+        - "-t"
+        - "hoernli-5.maas:9443"
+        - "-u"
+        - x7nfS68A88FZ4yWOkL7pSJ7yvkIa
+        - "-w"
+        - Nu_yQoDYGiLVxBRAZTSg2hjwX9sa
         stdin: true
         tty: true
         ports:
