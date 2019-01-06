@@ -21,4 +21,6 @@ class HybridTokenAwsMinio(
     ) = aws.storeObject(bucketName, objectName, data, mime)
 
     override fun getObject(bucketName: String, objectName: String) = minio.getObject(bucketName, objectName)
+
+    override fun deleteObject(bucketName: String, objectName: String) = minio.deleteObject(bucketName, objectName)
 }

@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "ch.unine"
-version = "0.3"
+version = "0.4"
 
 task<Jar>("sourcesJar") {
     from(sourceSets.main.get().allSource)

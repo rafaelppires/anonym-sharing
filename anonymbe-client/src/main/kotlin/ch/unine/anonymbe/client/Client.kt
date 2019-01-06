@@ -56,6 +56,9 @@ class Client(
         return tryDecrypt(encryptedData, envelope, SymmetricKey(b64Decoder.decode(userKey)))
     }
 
+    fun deleteFromCloud(groupId: String, filename: String) =
+        storageClient.deleteObject(bucketName = groupId, objectName = filename)
+
     private fun tryDecrypt(encryptedData: ByteArray, envelope: Envelope, userKey: SymmetricKey): ByteArray {
         /*
          * Format of the envelope:

@@ -68,6 +68,13 @@ abstract class Aws : StorageApi {
         it.key(objectName)
     }
 
+    override fun deleteObject(bucketName: String, objectName: String) {
+        client.deleteObject {
+            it.bucket(bucketName)
+            it.key(objectName)
+        }
+    }
+
     companion object {
         const val DEFAULT_ENDPOINT = "https://hoernli-5.maas:30900"
     }

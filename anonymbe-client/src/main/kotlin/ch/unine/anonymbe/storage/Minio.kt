@@ -81,6 +81,8 @@ class Minio(
     override fun getObject(bucketName: String, objectName: String): InputStream =
         client.getObject(bucketName, objectName)
 
+    override fun deleteObject(bucketName: String, objectName: String) = client.removeObject(bucketName, objectName)
+
     companion object {
         const val DEFAULT_ENDPOINT = "https://hoernli-5.maas:30900"
         const val DEFAULT_ACCESS_KEY = "access"
