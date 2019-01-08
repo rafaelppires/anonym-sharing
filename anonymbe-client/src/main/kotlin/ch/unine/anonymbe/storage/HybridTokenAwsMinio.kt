@@ -2,7 +2,7 @@ package ch.unine.anonymbe.storage
 
 class HybridTokenAwsMinio(
     minioEndpoint: String = Minio.DEFAULT_ENDPOINT,
-    writerProxyEndpoint: String = WriterProxy.DEFAULT_URL,
+    writerProxyEndpoint: String = WriterProxy.DEFAULT_URL_TOKEN,
     access: String = Minio.DEFAULT_ACCESS_KEY,
     secret: String = Minio.DEFAULT_SECRET_KEY
 ): StorageApi {
