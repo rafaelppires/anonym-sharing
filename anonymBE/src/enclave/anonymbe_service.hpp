@@ -214,7 +214,10 @@ Response AnonymBE<T>::process_input(const Request &request) {
         }
 
         if (error == ASKY_BAD_REQUEST) {
-            extra = "Unknown command '" + request.url().encodedPath() + "'";
+            if (response.find("detail") != response.end())
+                extra = response["detail"];
+            else
+                extra = "Unknown command '" + request.url().encodedPath() + "'";
         }
     } catch (const nlohmann::detail::out_of_range &e) {
         extra = e.what();
