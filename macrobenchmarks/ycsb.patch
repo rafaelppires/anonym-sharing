@@ -1,0 +1,11 @@
+--- a/workdir/bin/ycsb	2019-01-08 15:12:15.425267191 +0000
++++ b/workdir/bin/ycsb	2019-01-08 15:13:58.606444515 +0000
+@@ -56,6 +56,8 @@
+     "accumulo1.7"     : "com.yahoo.ycsb.db.accumulo.AccumuloClient",
+     "accumulo1.8"     : "com.yahoo.ycsb.db.accumulo.AccumuloClient",
+     "aerospike"    : "com.yahoo.ycsb.db.AerospikeClient",
++    "anonymbe-admin"  : "com.yahoo.ycsb.db.AnonymBEAdmin",
++    "anonymbe-storage": "com.yahoo.ycsb.db.AnonymBEStorage",
+     "arangodb"     : "com.yahoo.ycsb.db.arangodb.ArangoDBClient",
+     "arangodb3"     : "com.yahoo.ycsb.db.arangodb.ArangoDBClient",
+     "asynchbase"   : "com.yahoo.ycsb.db.AsyncHBaseClient",
