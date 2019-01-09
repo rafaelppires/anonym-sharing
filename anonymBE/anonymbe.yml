@@ -21,7 +21,7 @@ spec:
   selector:
     matchLabels:
       role: anonymbe
-  replicas: 1
+  replicas: 3
   revisionHistoryLimit: 1
   template:
     metadata:
@@ -33,7 +33,7 @@ spec:
       - name: regcred
       containers:
       - name: anonymbe-container
-        image: sebvaucher/anonymbe:0.31
+        image: sebvaucher/anonymbe:0.36
         args:
         - "./bin/anonymbe"
         - "-m"
