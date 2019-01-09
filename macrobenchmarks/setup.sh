@@ -1,8 +1,10 @@
 #!/bin/bash
 
-curl --location https://github.com/brianfrankcooper/YCSB/releases/download/0.15.0/ycsb-0.15.0.tar.gz | tar --strip-components=1 --one-top-level=workdir -zxv ycsb-0.15.0/{bin,lib,workloads,LICENSE.txt,NOTICE.txt}
+if [ ! -e workdir/LICENSE.txt ]; then
+    curl --location https://github.com/brianfrankcooper/YCSB/releases/download/0.15.0/ycsb-0.15.0.tar.gz | tar --strip-components=1 --one-top-level=workdir -zxv ycsb-0.15.0/{bin,lib,workloads,LICENSE.txt,NOTICE.txt}
+fi
 
-../anonymbe-client/gradlew --no-daemon -p ../anonymbe-client publishToMavenLocal
+../anonymbe-client/gradlew --no-daemon -p ../anonymbe-client publishToMavenLocal || exit -1
 
 mvn -f YCSB/anonymbe-admin/pom.xml package
 mvn -f YCSB/anonymbe-storage/pom.xml package
