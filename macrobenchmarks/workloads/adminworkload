@@ -1,0 +1,24 @@
+# Admin Workload: Churn generator
+#   Should be throttled
+
+# 1000 users minus the ones managed by the other YCSB instance
+recordcount=936
+
+# Infinite
+operationcount=0
+threadcount=1
+
+# 10 groups in total
+fieldcount=10
+# Only used with modulo to decide if add or remove
+fieldlength=1
+
+workload=com.yahoo.ycsb.workloads.CoreWorkload
+
+updateproportion=1
+insertproportion=0
+deleteproportion=0
+readproportion=0
+scanproportion=0
+
+requestdistribution=zipfian
