@@ -107,14 +107,15 @@ typename AnonymBE<T>::ASKYError AnonymBE<T>::generate_envelope(
 template <typename T>
 typename AnonymBE<T>::ASKYError AnonymBE<T>::create_user(json &j,
                                                          KVString &response) {
-    unsigned char rnd[KEY_SIZE];
+    char rnd[KEY_SIZE];
+    auto user_id = json_str(j, "user_id");
 #ifdef NATIVE
     for (int i = 0; i < sizeof(rnd); i += sizeof(int)) *(int *)&rnd[i] = rand();
 #else
-    sgx_read_rand(rnd, sizeof(rnd));
+    strncpy(rnd, user_id.c_str(), sizeof(rnd));
 #endif
     std::string key = std::string((const char *)rnd, sizeof(rnd));
-    database_.create_user(json_str(j, "user_id"), key);
+    database_.create_user(user_id, key);
     // if( key == "" ) return ASKY_CREATE_EXISTENT;
     response["user_key"] = Crypto::b64_encode(key);
     return ASKY_NOERROR;

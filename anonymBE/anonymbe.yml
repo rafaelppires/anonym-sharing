@@ -33,7 +33,7 @@ spec:
       - name: regcred
       containers:
       - name: anonymbe-container
-        image: sebvaucher/anonymbe:0.59
+        image: sebvaucher/anonymbe:0.60
         args:
         - "./bin/anonymbe"
         - "--indexed=true"
