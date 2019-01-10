@@ -30,7 +30,7 @@ open class Envelope(protected val envelope: ByteArray) {
     val raw get() = envelope.copyOf()
 
     @Throws(Exception::class)
-    open fun open(userKey: SymmetricKey): ByteArray {
+    open fun open(userKey: ByteArray): ByteArray {
         val envelopeBuffer = ByteBuffer.wrap(envelope)
         val encryptedKey = ByteArray(ENCRYPTED_KEY_BYTES)
 
@@ -65,10 +65,10 @@ open class Envelope(protected val envelope: ByteArray) {
 
 class IndexedEnvelope(envelope: ByteArray) : Envelope(envelope) {
     @ExperimentalUnsignedTypes
-    override fun open(userKey: SymmetricKey): ByteArray {
+    override fun open(userKey: ByteArray): ByteArray {
         val hashToFind: ByteArray = digester.digest(ByteArray(NONCE_BYTES + CIPHER_KEY_BYTES).also {
             envelope.copyInto(it, endIndex = NONCE_BYTES)
-            userKey.encoded.copyInto(it, NONCE_BYTES)
+            userKey.copyInto(it, NONCE_BYTES)
         })
 
         // Get a ByteBuffer that starts where the keys start

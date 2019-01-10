@@ -12,7 +12,7 @@ import java.util.*
 
 class Client(
     private val userId: String,
-    userKey: ByteArray,
+    private val userKey: ByteArray,
     apiUrl: String,
     private val storageClient: StorageApi,
     private inline val envelopeProvider: (ByteArray) -> Envelope
@@ -20,7 +20,6 @@ class Client(
     private val apiClient: UserApi = Api.build(apiUrl)
     private val b64Encoder: Base64.Encoder = Base64.getEncoder()
     private val b64Decoder: Base64.Decoder = Base64.getDecoder()
-    private val userKey = SymmetricKey(userKey)
 
     fun generateSymmetricKeyAndGetEnvelope(groupId: String): Pair<SymmetricKey, Envelope> {
         val key = Encryption.generateKey()
