@@ -3,6 +3,7 @@ package ch.unine.anonymbe.api
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import retrofit2.Response
+import java.util.*
 
 @JsonClass(generateAdapter = true)
 data class UserGroup(
@@ -58,11 +59,14 @@ class EnvelopeResult(
 
 @JsonClass(generateAdapter = true)
 class UserResult(
-    result: String, msg: String?, detail: String?, info: String?,
-    val user_key: String
+    result: String, msg: String?, detail: String?, info: String?, @Json(name = "user_key") val b64UserKey: String
 ) : Result(result, msg, detail, info) {
+    val userKey: ByteArray by lazy {
+        Base64.getDecoder().decode(b64UserKey)
+    }
+
     override fun toString(): String {
-        return "UserResult(user_key='$user_key') ${super.toString()}"
+        return "UserResult(user_key='$b64UserKey') ${super.toString()}"
     }
 }
 

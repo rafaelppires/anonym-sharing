@@ -39,9 +39,23 @@ class Minio(
             return
         }
 
+        emptyBucket(bucketName)
+
+        try {
+            client.removeBucket(bucketName)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun emptyBucket(bucketName: String) {
+        if (!client.bucketExists(bucketName)) {
+            return
+        }
+
         var attemptsLeft = 20
 
-        while (attemptsLeft --> 0) {
+        while (attemptsLeft-- > 0) {
             try {
                 val objects = client.listObjects(bucketName)
                     .map { it.get().objectName() }
@@ -61,12 +75,6 @@ class Minio(
             } catch (e: XmlPullParserException) {
                 println(e.message)
             }
-        }
-
-        try {
-            client.removeBucket(bucketName)
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
     }
 

@@ -12,6 +12,6 @@ fun main(args: Array<String>) {
     println("HTTP result = ${result.isSuccessful}")
     result.body()?.let { body ->
         println("JSON result = ${body.result}")
-        println("user_key = ${body.user_key}")
+        println("userKey = ${body.userKey}")
     }
 }

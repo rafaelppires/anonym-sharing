@@ -6,7 +6,7 @@ import ch.unine.anonymbe.api.User
 import ch.unine.anonymbe.api.UserGroup
 import ch.unine.anonymbe.client.Client
 import ch.unine.anonymbe.client.IndexedEnvelope
-import ch.unine.anonymbe.storage.HybridTokenAwsMinio
+import ch.unine.anonymbe.storage.Minio
 import java.util.*
 import kotlin.random.Random
 
@@ -15,7 +15,7 @@ fun main(args: Array<String>) {
 }
 
 const val groupId = "endtoend"
-val storageClient = HybridTokenAwsMinio()
+val storageClient = Minio()
 
 typealias EnvelopeClass = IndexedEnvelope
 
@@ -34,7 +34,7 @@ fun endToEndDemo(dummyData: ByteArray): ByteArray = try {
     println("Creating user")
     val userResult = adminApi.createUser(User(userId)).execute()
     val userKey = if (userResult.isSuccessful) {
-        userResult.body()?.user_key ?: throw Exception("Cannot get user key")
+        userResult.body()?.userKey ?: throw Exception("Cannot get user key")
     } else {
         throw Exception("Cannot create user: ${userResult.errorBody()?.string()}")
     }
@@ -47,13 +47,13 @@ fun endToEndDemo(dummyData: ByteArray): ByteArray = try {
 
     println("Admin part done")
 
-    val client = Client(userId, Api.DEFAULT_URL, storageClient) { EnvelopeClass(it) }
+    val client = Client(userId, userKey, Api.DEFAULT_URL, storageClient) { EnvelopeClass(it) }
 
     println("Generating symmetric key and asking refmon for envelope")
     val (symmetricKey, envelope) = client.generateSymmetricKeyAndGetEnvelope(groupId)
 
     println("Verifying envelope")
-    if (client.verifyEnvelope(userKey, envelope, symmetricKey.encoded)) {
+    if (client.verifyEnvelope(envelope, symmetricKey.encoded)) {
         println("Success on getting the envelope")
     } else {
         throw Exception("Content of the envelope is not what we sent!")
@@ -65,7 +65,7 @@ fun endToEndDemo(dummyData: ByteArray): ByteArray = try {
     println("Upload done")
 
     println("Retrieve data back")
-    val retrievedData: ByteArray = client.retrieveFromCloud(userKey, groupId, filename)
+    val retrievedData: ByteArray = client.retrieveFromCloud(groupId, filename)
 
     val b64Encoder = Base64.getEncoder()
     println("Original data: ${b64Encoder.encodeToString(dummyData)}")

@@ -12,6 +12,7 @@ import java.util.*
 
 class Client(
     private val userId: String,
+    userKey: ByteArray,
     apiUrl: String,
     private val storageClient: StorageApi,
     private inline val envelopeProvider: (ByteArray) -> Envelope
@@ -19,6 +20,7 @@ class Client(
     private val apiClient: UserApi = Api.build(apiUrl)
     private val b64Encoder: Base64.Encoder = Base64.getEncoder()
     private val b64Decoder: Base64.Decoder = Base64.getDecoder()
+    private val userKey = SymmetricKey(userKey)
 
     fun generateSymmetricKeyAndGetEnvelope(groupId: String): Pair<SymmetricKey, Envelope> {
         val key = Encryption.generateKey()
@@ -45,7 +47,7 @@ class Client(
         putObjectToStorage(dataToStore, groupName, objectName)
     }
 
-    fun retrieveFromCloud(userKey: String, groupId: String, filename: String): ByteArray {
+    fun retrieveFromCloud(groupId: String, filename: String): ByteArray {
         val inputStream = DataInputStream(storageClient.getObject(groupId, filename))
         val envelopeLength = inputStream.readInt()
 
@@ -53,13 +55,13 @@ class Client(
         val encryptedData = inputStream.readAllBytes()
         inputStream.close()
 
-        return tryDecrypt(encryptedData, envelope, SymmetricKey(b64Decoder.decode(userKey)))
+        return tryDecrypt(encryptedData, envelope)
     }
 
     fun deleteFromCloud(groupId: String, filename: String) =
         storageClient.deleteObject(bucketName = groupId, objectName = filename)
 
-    private fun tryDecrypt(encryptedData: ByteArray, envelope: Envelope, userKey: SymmetricKey): ByteArray {
+    private fun tryDecrypt(encryptedData: ByteArray, envelope: Envelope): ByteArray {
         /*
          * Format of the envelope:
          *  12 bytes of IV
@@ -98,6 +100,6 @@ class Client(
         storageClient.storeObject(groupName, objectName, encryptedData)
     }
 
-    fun verifyEnvelope(userKey: String, envelope: Envelope, expectedContent: ByteArray): Boolean =
-        expectedContent.contentEquals(envelope.open(SymmetricKey(b64Decoder.decode(userKey))))
+    fun verifyEnvelope(envelope: Envelope, expectedContent: ByteArray): Boolean =
+        expectedContent contentEquals envelope.open(userKey)
 }
