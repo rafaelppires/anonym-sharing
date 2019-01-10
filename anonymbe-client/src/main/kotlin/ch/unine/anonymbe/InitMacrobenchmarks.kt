@@ -11,6 +11,10 @@ fun main(args: Array<String>) {
     Minio().emptyBucket(GROUP_NAME)
     println("Bucket is empty")
 
+    if (args.getOrNull(0) == "bucketonly") {
+        return
+    }
+
     val api: AdminApi = Api.build()
     println("Removing all users from AdminService")
     api.deleteAllData().execute().throwExceptionIfNotReallySuccessful()
