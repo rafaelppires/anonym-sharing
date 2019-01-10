@@ -39,9 +39,23 @@ class Minio(
             return
         }
 
+        emptyBucket(bucketName)
+
+        try {
+            client.removeBucket(bucketName)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun emptyBucket(bucketName: String) {
+        if (!client.bucketExists(bucketName)) {
+            return
+        }
+
         var attemptsLeft = 20
 
-        while (attemptsLeft --> 0) {
+        while (attemptsLeft-- > 0) {
             try {
                 val objects = client.listObjects(bucketName)
                     .map { it.get().objectName() }
@@ -62,12 +76,6 @@ class Minio(
                 println(e.message)
             }
         }
-
-        try {
-            client.removeBucket(bucketName)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
     }
 
     override fun storeObject(
@@ -80,6 +88,8 @@ class Minio(
 
     override fun getObject(bucketName: String, objectName: String): InputStream =
         client.getObject(bucketName, objectName)
+
+    override fun deleteObject(bucketName: String, objectName: String) = client.removeObject(bucketName, objectName)
 
     companion object {
         const val DEFAULT_ENDPOINT = "https://hoernli-5.maas:30900"

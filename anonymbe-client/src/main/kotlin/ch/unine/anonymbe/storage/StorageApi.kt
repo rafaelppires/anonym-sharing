@@ -13,4 +13,6 @@ interface StorageApi {
     )
 
     fun getObject(bucketName: String, objectName: String): InputStream
+
+    fun deleteObject(bucketName: String, objectName: String)
 }

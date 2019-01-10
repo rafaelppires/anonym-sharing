@@ -12,6 +12,7 @@ import java.util.*
 
 class Client(
     private val userId: String,
+    private val userKey: ByteArray,
     apiUrl: String,
     private val storageClient: StorageApi,
     private inline val envelopeProvider: (ByteArray) -> Envelope
@@ -45,7 +46,7 @@ class Client(
         putObjectToStorage(dataToStore, groupName, objectName)
     }
 
-    fun retrieveFromCloud(userKey: String, groupId: String, filename: String): ByteArray {
+    fun retrieveFromCloud(groupId: String, filename: String): ByteArray {
         val inputStream = DataInputStream(storageClient.getObject(groupId, filename))
         val envelopeLength = inputStream.readInt()
 
@@ -53,10 +54,13 @@ class Client(
         val encryptedData = inputStream.readAllBytes()
         inputStream.close()
 
-        return tryDecrypt(encryptedData, envelope, SymmetricKey(b64Decoder.decode(userKey)))
+        return tryDecrypt(encryptedData, envelope)
     }
 
-    private fun tryDecrypt(encryptedData: ByteArray, envelope: Envelope, userKey: SymmetricKey): ByteArray {
+    fun deleteFromCloud(groupId: String, filename: String) =
+        storageClient.deleteObject(bucketName = groupId, objectName = filename)
+
+    private fun tryDecrypt(encryptedData: ByteArray, envelope: Envelope): ByteArray {
         /*
          * Format of the envelope:
          *  12 bytes of IV
@@ -95,6 +99,6 @@ class Client(
         storageClient.storeObject(groupName, objectName, encryptedData)
     }
 
-    fun verifyEnvelope(userKey: String, envelope: Envelope, expectedContent: ByteArray): Boolean =
-        expectedContent.contentEquals(envelope.open(SymmetricKey(b64Decoder.decode(userKey))))
+    fun verifyEnvelope(envelope: Envelope, expectedContent: ByteArray): Boolean =
+        expectedContent contentEquals envelope.open(userKey)
 }

@@ -2,7 +2,7 @@ package ch.unine.anonymbe.storage
 
 class HybridTokenAwsMinio(
     minioEndpoint: String = Minio.DEFAULT_ENDPOINT,
-    writerProxyEndpoint: String = WriterProxy.DEFAULT_URL,
+    writerProxyEndpoint: String = WriterProxy.DEFAULT_URL_TOKEN,
     access: String = Minio.DEFAULT_ACCESS_KEY,
     secret: String = Minio.DEFAULT_SECRET_KEY
 ): StorageApi {
@@ -21,4 +21,6 @@ class HybridTokenAwsMinio(
     ) = aws.storeObject(bucketName, objectName, data, mime)
 
     override fun getObject(bucketName: String, objectName: String) = minio.getObject(bucketName, objectName)
+
+    override fun deleteObject(bucketName: String, objectName: String) = minio.deleteObject(bucketName, objectName)
 }

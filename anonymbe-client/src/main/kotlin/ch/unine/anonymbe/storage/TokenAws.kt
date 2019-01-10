@@ -70,7 +70,7 @@ data class TempToken(
 
 class TokenAws(
     private val awsEndpoint: String = DEFAULT_ENDPOINT,
-    writerProxyEndpoint: String = WriterProxy.DEFAULT_URL
+    writerProxyEndpoint: String = WriterProxy.DEFAULT_URL_TOKEN
 ) : Aws() {
     private val writerProxyApi: WriterProxyApi = Api.build(writerProxyEndpoint)
     private var token: TempToken? = null

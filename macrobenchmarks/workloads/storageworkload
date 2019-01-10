@@ -1,0 +1,7 @@
+# Parameter overwrites for storage workload
+
+recordcount=100
+operationcount=100000
+workload=com.yahoo.ycsb.workloads.CoreWorkload
+readallfields=true
+threadcount=64

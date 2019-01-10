@@ -28,7 +28,10 @@ class WriterProxy(private val storageApi: StorageApi, writerProxyUrl: String = D
         writerProxy.uploadFile(bucketName, objectName, requestBody).execute().throwExceptionIfNotSuccessful()
     }
 
+    override fun deleteObject(bucketName: String, objectName: String) = storageApi.deleteObject(bucketName, objectName)
+
     companion object {
         const val DEFAULT_URL = "https://hoernli-4.maas:30555"
+        const val DEFAULT_URL_TOKEN = "https://hoernli-4.maas:30556"
     }
 }
