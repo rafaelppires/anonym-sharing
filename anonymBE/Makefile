@@ -99,7 +99,7 @@ endif
 
 EnclaveLFlags := $(EnclExtLibs) $(EnclaveLFlags)
 EnclCInclude     := $(addprefix -I, $(Enclave_IncDirs))
-EnclCXXInclude   := $(EnclCInclude) $(addprefix -I, $(EnclaveCXXIDirs) $(MinioClientDir))
+EnclCXXInclude   := $(EnclCInclude) $(addprefix -I, $(EnclaveCXXIDirs) $(MinioClientDir) $(MinioClientDir)/simple-http)
 NatvInclude      := $(addprefix -I, $(NatvIncludeDirs))
 
 ifeq ($(DEBUG), 1)
@@ -162,6 +162,9 @@ $(ObjDir)/%_u.o : $(EnclaveSources)/%.cpp | $(ObjDir)
 $(ObjDir)/%_u.o : $(MinioClientDir)/%.cpp | $(ObjDir)
 	@$(call run_and_test,$(CXX) -DWRITERPROXY $(Natv_CXXFlags) $(NatvInclude) -c -o $@ $<,"CXX")
 
+$(ObjDir)/%_u.o : $(MinioClientDir)/simple-http/%.cpp | $(ObjDir)
+	@$(call run_and_test,$(CXX) -DWRITERPROXY $(Natv_CXXFlags) $(NatvInclude) -c -o $@ $<,"CXX")
+
 $(ObjDir)/%_writeproxy_u.o : $(SrcDir)/%.cpp | $(ObjDir)
 	@$(call run_and_test,$(CXX) -DWRITERPROXY $(Natv_CXXFlags) $(NatvInclude) -c -o $@ $<,"CXX")
 
@@ -205,6 +208,9 @@ $(ObjDir)/%_t.o : $(SGX_COMMONDIR)/libc_mock/%.cpp | $(ObjDir)
 	@$(call run_and_test,$(CXX) -c $< -o $@ $(Encl_CXXFlags) $(EnclCXXInclude),"CXX SGX")
 
 $(ObjDir)/%_t.o : $(MinioClientDir)/%.cpp | $(ObjDir)
+	@$(call run_and_test,$(CXX) -c $< -o $@ $(Encl_CXXFlags) $(EnclCXXInclude),"CXX SGX")
+
+$(ObjDir)/%_t.o : $(MinioClientDir)/simple-http/%.cpp | $(ObjDir)
 	@$(call run_and_test,$(CXX) -c $< -o $@ $(Encl_CXXFlags) $(EnclCXXInclude),"CXX SGX")
 
 $(ObjDir)/%_t.o : $(EnclaveSources)/%.cpp | $(ObjDir)

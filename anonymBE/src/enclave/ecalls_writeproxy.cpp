@@ -43,10 +43,9 @@ void process_input(IncomeSSLConnection &conn, const char *buff, size_t len) {
 
     try {
         decoder.addChunk(input);
-        while (decoder.requestReady()) {
+        while (decoder.getRequest(req)) {
             if (++requests_received % 100000 == 0)
                 printf("%luk Requests\n", requests_received / 1000);
-            req = decoder.getRequest();
             std::string response = writerproxy.treat_request(req).toString();
             if (conn.send(response.data(), response.size()) < 0)
                 printf("not sent\n");

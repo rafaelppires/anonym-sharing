@@ -164,6 +164,7 @@ std::string WriterProxy::request_reply(const HttpUrl &endpoint,
     if (connection.send(reqstr.data(), reqstr.size()) <= 0) throw error;
 
     Http1Decoder decoder;
+    Response r;
     do {
         char buff[5000];
         int len = connection.recv(buff, sizeof(buff));
@@ -171,9 +172,8 @@ std::string WriterProxy::request_reply(const HttpUrl &endpoint,
         std::string reply(buff, len);
         // printf("(%s)\n", reply.c_str());
         decoder.addChunk(reply);
-    } while (!decoder.responseReady());
+    } while (!decoder.getResponse(r));
 
-    Response r = decoder.getResponse();
     if (r.isSuccessful()) {
         return r.body();
     }
