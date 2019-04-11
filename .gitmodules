@@ -4,9 +4,6 @@
 [submodule "anonymBE/src/mongo-sgx-client"]
 	path = anonymBE/src/mongo-sgx-client
 	url = git@github.com:sebva/mongo-sgx-client.git
-[submodule "anonymBE/src/sgx_common"]
-	path = anonymBE/src/sgx_common
-	url = https://gitlab.securecloud.works/rafael.pires/sgx_common.git
 [submodule "anonymBE/src/minioclient-cpp"]
 	path = anonymBE/src/minioclient-cpp
 	url = https://github.com/rafaelppires/minioclient-cpp.git
@@ -16,3 +13,6 @@
 [submodule "YCSB"]
 	path = macrobenchmarks/YCSB
 	url = git@github.com:sebva/YCSB.git
+[submodule "anonymBE/src/sgx_common"]
+	path = anonymBE/src/sgx_common
+	url = https://github.com/rafaelppires/sgx_common.git
