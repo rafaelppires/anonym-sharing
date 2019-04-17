@@ -24,7 +24,7 @@ Enclave_SDK_Libs     := -Wl,--whole-archive \
                              $(addprefix -l, sgx_tstdc sgx_tcxx sgx_tcrypto \
                                              $(Service_Library_Name) ) \
                         -Wl,--end-group \
-                        -lsgx_tstdcxx -lsgx_tstdc
+                        -lsgx_tstdc
 Enclave_Lib_Dirs     := $(SGX_LIBRARY_PATH)
 Enclave_Link_Flags   := $(addprefix -L, $(Enclave_Lib_Dirs)) \
                         $(addprefix -l, $(Enclave_Libs)) \
