@@ -33,7 +33,7 @@ spec:
       - name: regcred
       containers:
       - name: anonymbe-container
-        image: sebvaucher/anonymbe:0.37
+        image: sebvaucher/anonymbe:0.41
         args:
         - "./bin/anonymbe"
         - "-m"
@@ -53,13 +53,12 @@ spec:
             path: /ping
             port: service-port
             scheme: HTTPS
-          initialDelaySeconds: 5
-          periodSeconds: 3
+          initialDelaySeconds: 6
+          periodSeconds: 2
         livenessProbe:
           httpGet:
             path: /ping
             port: service-port
             scheme: HTTPS
-          initialDelaySeconds: 10
+          initialDelaySeconds: 15
           periodSeconds: 5
-
