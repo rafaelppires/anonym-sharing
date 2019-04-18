@@ -24,6 +24,10 @@ open class GroupBenchmark : AdminBenchmark() {
 
         println("Filling database")
         val preAdd = preAddGroups.toBoolean()
+
+        service.createUser(User("dummyuser")).execute()
+        service.createGroup(UserGroup("dummyuser", "creategrouptest")).execute()
+
         (1..(usersAmount.toInt()))
             .map { "user$it" }
             .parallelStream()
