@@ -9,12 +9,12 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 
 object Deployments {
-    const val ANONYMBE_MONGO_URL = "https://hoernli-4.maas:30444/"
-    const val ANONYMBE_MEM_URL = "https://hoernli-4.maas:30445/"
-    const val WRITERPROXY_URL = "https://hoernli-4.maas:30555/"
-    const val WRITERPROXY_TOKEN_URL = "https://hoernli-4.maas:30556/"
-    const val MINIO_URL = "https://hoernli-5.maas:30900/"
-    const val NGINX_URL = "https://hoernli-4.maas:30700"
+    const val ANONYMBE_MONGO_URL = "https://eno1.cervino-5.maas:30444/"
+    const val ANONYMBE_MEM_URL = "https://eno1.cervino-5.maas:30445/"
+    const val WRITERPROXY_URL = "https://eno1.cervino-5.maas:30555/"
+    const val WRITERPROXY_TOKEN_URL = "https://eno1.cervino-5.maas:30556/"
+    const val MINIO_URL = "https://ens7.hoernli-5.maas:30900/"
+    const val NGINX_URL = "https://ens7.hoernli-6.maas:30700"
 }
 
 enum class Deployment(val deploymentName: String, val apiUrl: String) {
