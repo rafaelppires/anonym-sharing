@@ -3,9 +3,9 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     id("maven-publish")
     id("com.github.johnrengelman.shadow") version "4.0.3"
-    kotlin("jvm") version "1.3.10"
-    id("org.jetbrains.kotlin.kapt") version "1.3.10"
-    id("me.champeau.gradle.jmh") version "0.4.7"
+    kotlin("jvm") version "1.3.30"
+    id("org.jetbrains.kotlin.kapt") version "1.3.30"
+    id("me.champeau.gradle.jmh") version "0.4.8"
 }
 
 group = "ch.unine"
@@ -13,7 +13,7 @@ version = "0.6"
 
 task<Jar>("sourcesJar") {
     from(sourceSets.main.get().allSource)
-    classifier = "sources"
+    archiveClassifier.set("sources")
 }
 
 publishing {
@@ -51,18 +51,18 @@ repositories {
 dependencies {
     compile(kotlin("stdlib-jdk8"))
 
-    kapt("com.squareup.moshi:moshi-kotlin-codegen:1.7.0")
+    kapt("com.squareup.moshi:moshi-kotlin-codegen:1.8.0")
 
-    compile("software.amazon.awssdk:s3:2.2.0")
-    compile("software.amazon.awssdk:apache-client:2.2.0")
+    compile("software.amazon.awssdk:s3:2.5.27")
+    compile("software.amazon.awssdk:apache-client:2.5.27")
     compile("org.apache.logging.log4j:log4j-core:2.11.1")
     compile("org.apache.logging.log4j:log4j-api:2.11.1")
     compile("org.apache.logging.log4j:log4j-slf4j-impl:2.11.1")
-    compile("io.minio:minio:5.0.2")
+    compile("io.minio:minio:6.0.4")
 
     compile("com.squareup.retrofit2:retrofit:2.5.0")
     compile("com.squareup.retrofit2:converter-moshi:2.5.0")
-    "com.squareup.okhttp3:okhttp:3.12.0".also {
+    "com.squareup.okhttp3:okhttp:3.14.1".also {
         compile(it)
         jmh(it)
     }
@@ -72,9 +72,9 @@ dependencies {
         jmh(it)
     }
     */
-    compile("com.squareup.moshi:moshi:1.7.0")
+    compile("com.squareup.moshi:moshi:1.8.0")
 
-    testCompile("org.jetbrains.kotlin:kotlin-test-junit:1.3.10")
+    testCompile("org.jetbrains.kotlin:kotlin-test-junit:1.3.30")
 
     jmhCompile("org.openjdk.jmh:jmh-core:1.21")
 }

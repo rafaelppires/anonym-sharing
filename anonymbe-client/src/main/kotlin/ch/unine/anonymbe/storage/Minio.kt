@@ -65,7 +65,7 @@ class Minio(
 
                 objects.asIterable()
                     .let {
-                        client.removeObject(bucketName, it)
+                        client.removeObjects(bucketName, it)
                     }.joinToString { it.get().message() }
                     .run {
                         if (isNotEmpty()) {
