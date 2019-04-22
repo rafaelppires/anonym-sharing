@@ -46,13 +46,17 @@ open class GroupBenchmark : AdminBenchmark() {
     @BenchmarkMode(Mode.Throughput)
     fun addUserToGroupBenchmark() {
         val userGroup = queue.remove()
-        service.addUserToGroup(userGroup).execute().throwExceptionIfNotSuccessful()
+        if (!service.addUserToGroup(userGroup).execute().isSuccessful) {
+            errors++
+        }
     }
 
     @Benchmark
     @BenchmarkMode(Mode.Throughput)
     fun deleteUserFromGroupBenchmark() {
         val userGroup = queue.remove()
-        service.deleteUserFromGroup(userGroup).execute().throwExceptionIfNotSuccessful()
+        if (!service.deleteUserFromGroup(userGroup).execute().isSuccessful) {
+            errors++
+        }
     }
 }
