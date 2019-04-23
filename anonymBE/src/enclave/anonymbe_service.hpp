@@ -263,7 +263,7 @@ std::string AnonymBE<T>::mongo_error(bson_error_t& e) {
         case 11000u:
             return "Attempt to add an existing user";
         default:
-            return e.message;
+            return std::string("Code: ") + std::to_string(e.code) + "; message: " + e.message;
     }
 }
 #endif
@@ -285,7 +285,7 @@ Response AnonymBE<T>::negative_response(const std::string &msg,
                                         const std::string &extra) {
     json j;
     j["result"] = "error";
-    j["detail"] = extra != "" ? extra : msg;
+    j["detail"] = !extra.empty() ? extra : msg;
 
     return ResponseBuilder(negrep).appendBody(j.dump(2)).build();
 }
@@ -301,8 +301,13 @@ int AnonymBE<T>::init(Arguments *args) {
         database_.init(args->mongo);
         indexed_ = args->indexed != 0;
         init_ = true;
+#ifdef ABEMONGO
+    } catch (bson_error_t &e) {
+        printf("Error during initialization: %s\n", mongo_error(e));
+        return -1;
+#endif
     } catch (uint32_t e) {
-        printf("Error: %u\n", e);
+        printf("Unknown error during initialization: code %u\n", e);
         return -1;
     }
     return 0;
