@@ -33,7 +33,7 @@ spec:
       - name: regcred
       containers:
       - name: anonymbe-container
-        image: sebvaucher/anonymbe:0.41
+        image: sebvaucher/anonymbe:0.48
         args:
         - "./bin/anonymbe"
         - "-m"
@@ -62,3 +62,4 @@ spec:
             scheme: HTTPS
           initialDelaySeconds: 15
           periodSeconds: 5
+
