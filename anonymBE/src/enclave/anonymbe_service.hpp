@@ -230,9 +230,11 @@ Response AnonymBE<T>::process_input(const Request &request) {
         error = ASKY_BAD_REQUEST;
     } catch (const std::logic_error &e) {  // warning, not error
         response["info"] = e.what();
-    } catch (uint32_t e) {
+#ifdef ABEMONGO
+    } catch (bson_error_t &e) {
         extra = mongo_error(e);
         error = ASKY_UNKNOWN;
+#endif
     } catch (const std::exception &e) {
         printf("Error: %s\n", e.what());
     } catch (...) {
@@ -254,16 +256,17 @@ Response AnonymBE<T>::process_input(const Request &request) {
     return {};
 }
 //------------------------------------------------------------------------------
+#ifdef ABEMONGO
 template <typename T>
-std::string AnonymBE<T>::mongo_error(uint32_t e) {
-    switch (e) {
-        case 11000:
+std::string AnonymBE<T>::mongo_error(bson_error_t& e) {
+    switch (e.code) {
+        case 11000u:
             return "Attempt to add an existing user";
         default:
-            return "Unknown mongo error";
-    };
+            return e.message;
+    }
 }
-
+#endif
 //------------------------------------------------------------------------------
 template <typename T>
 Response AnonymBE<T>::positive_response(const KVString &response) {

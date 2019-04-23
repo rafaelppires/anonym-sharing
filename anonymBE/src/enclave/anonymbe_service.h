@@ -13,6 +13,9 @@
 #ifdef TLS_REQUESTS
 #include <tls_config.h>
 #endif
+#ifdef ABEMONGO
+#include <bson.h>
+#endif
 #include <json/json.hpp>
 using json = nlohmann::json;
 typedef std::map<std::string, std::string> KVString;
@@ -52,7 +55,9 @@ class AnonymBE {
     ASKYError generate_envelope(json &,KVString &response);
     ASKYError create_user(json &,KVString &response);
 
-    std::string mongo_error(uint32_t);
+#ifdef ABEMONGO
+    std::string mongo_error(bson_error_t &);
+#endif
     std::string sgx_errmsg(int);
     std::string err_amcs(ASKYError e);
     bool printmsg_onerror(int ret, const char *msg);
