@@ -2,7 +2,6 @@ package ch.unine.anonymbe
 
 import ch.unine.anonymbe.api.User
 import ch.unine.anonymbe.api.UserGroup
-import ch.unine.anonymbe.api.throwExceptionIfNotSuccessful
 import org.openjdk.jmh.annotations.*
 import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -12,40 +11,42 @@ open class GroupBenchmark : AdminBenchmark() {
     @Param("20000")
     private var usersAmount: String = "0"
 
-    @Param("false")
-    private var preAddGroups: String = "false"
+    @Param("0")
+    private var usersPreadded: String = "0"
 
-    private val queue: Queue<UserGroup> = ConcurrentLinkedQueue()
+    private val usersToAdd: Queue<UserGroup> = ConcurrentLinkedQueue()
+    private val usersToRemove: Queue<UserGroup> = ConcurrentLinkedQueue()
 
     @Setup(Level.Iteration)
     fun fillDatabase() {
-        println("${queue.size} items left in queue")
-        queue.clear()
+        println("${usersToAdd.size} items left in usersToAdd")
+        println("${usersToRemove.size} items left in usersToRemove")
+        usersToAdd.clear()
 
         println("Filling database")
-        val preAdd = preAddGroups.toBoolean()
+        var preAdd = usersPreadded.toInt()
+        val usersAmount = this.usersAmount.toInt() + preAdd
 
         service.createUser(User("dummyuser")).execute()
         service.createGroup(UserGroup("dummyuser", "creategrouptest")).execute()
 
-        (1..(usersAmount.toInt()))
-            .map { "user$it" }
-            .parallelStream()
-            .forEach { userId ->
-                service.createUser(User(userId)).execute()
-                val userGroup = UserGroup(userId, "creategrouptest")
-                if (preAdd) {
-                    service.addUserToGroup(userGroup).execute()
-                }
-                queue.add(userGroup)
+        for (userId in (1..usersAmount).map { "user$it" }) {
+            service.createUser(User(userId)).execute()
+            val userGroup = UserGroup(userId, "creategrouptest")
+            if ((preAdd--) > 0) {
+                service.addUserToGroup(userGroup).execute()
+                usersToRemove.add(userGroup)
+            } else {
+                usersToAdd.add(userGroup)
             }
+        }
         println("Filled")
     }
 
     @Benchmark
     @BenchmarkMode(Mode.Throughput)
     fun addUserToGroupBenchmark() {
-        val userGroup = queue.remove()
+        val userGroup = usersToAdd.remove()
         if (!service.addUserToGroup(userGroup).execute().isSuccessful) {
             errors++
         }
@@ -54,7 +55,7 @@ open class GroupBenchmark : AdminBenchmark() {
     @Benchmark
     @BenchmarkMode(Mode.Throughput)
     fun deleteUserFromGroupBenchmark() {
-        val userGroup = queue.remove()
+        val userGroup = usersToRemove.remove()
         if (!service.deleteUserFromGroup(userGroup).execute().isSuccessful) {
             errors++
         }
