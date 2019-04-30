@@ -8,7 +8,7 @@ import ch.unine.anonymbe.api.*
 fun main(args: Array<String>) {
     val service = Api.build<AdminApi>(args.getOrElse(0) { Api.DEFAULT_URL })
 
-    for (i in 1..MAX_MAGNITUDE) {
+    for (i in 1..(MAX_MAGNITUDE + ADDITIONAL_USERS)) {
         try {
             service.createUser(User("$USER_NAME_PREFIX$i")).execute().throwExceptionIfNotReallySuccessful()
         } catch (e: Exception) {
@@ -43,5 +43,6 @@ fun main(args: Array<String>) {
 }
 
 const val MAX_MAGNITUDE = 10_000
+const val ADDITIONAL_USERS = 5_000
 const val USER_NAME_PREFIX = "envelope-user-"
 const val GROUP_NAME_PREFIX = "envelope-group-"

@@ -1,10 +1,8 @@
 package ch.unine.anonymbe
 
-import ch.unine.anonymbe.api.User
 import ch.unine.anonymbe.api.UserGroup
 import org.openjdk.jmh.annotations.*
-import java.util.*
-import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.atomic.AtomicInteger
 
 @State(Scope.Benchmark)
 open class GroupBenchmark : AdminBenchmark() {
@@ -14,39 +12,39 @@ open class GroupBenchmark : AdminBenchmark() {
     @Param("0")
     private var usersPreadded: String = "0"
 
-    private val usersToAdd: Queue<UserGroup> = ConcurrentLinkedQueue()
-    private val usersToRemove: Queue<UserGroup> = ConcurrentLinkedQueue()
+    private val userCounter: AtomicInteger = AtomicInteger(MAX_MAGNITUDE + 1)
 
     @Setup(Level.Iteration)
     fun fillDatabase() {
-        println("${usersToAdd.size} items left in usersToAdd")
-        println("${usersToRemove.size} items left in usersToRemove")
-        usersToAdd.clear()
-
         println("Filling database")
-        var preAdd = usersPreadded.toInt()
-        val usersAmount = this.usersAmount.toInt() + preAdd
 
-        service.createUser(User("dummyuser")).execute()
-        service.createGroup(UserGroup("dummyuser", "creategrouptest")).execute()
+        val process = ProcessBuilder(
+            """docker run -ti --rm --network=host -v /home/ubuntu/mongobackup:/mongobackup:ro mongo:4.0.9-xenial
+                | mongorestore --host=rs0/localhost:30000 -d newtest
+                | --ssl --sslAllowInvalidCertificates --sslAllowInvalidHostnames
+                | --gzip --archive=/mongobackup/envelope-state.mongo.gz""".trimMargin()
+                .split(' ')
+        )
+            .redirectOutput(ProcessBuilder.Redirect.INHERIT)
+            .redirectError(ProcessBuilder.Redirect.INHERIT)
+            .start()
 
-        for (userId in (1..usersAmount).map { "user$it" }) {
-            service.createUser(User(userId)).execute()
-            val userGroup = UserGroup(userId, "creategrouptest")
-            if ((preAdd--) > 0) {
-                service.addUserToGroup(userGroup).execute()
-                usersToRemove.add(userGroup)
-            } else {
-                usersToAdd.add(userGroup)
-            }
+        if (process.waitFor() != 0) {
+            throw Exception("Error running mongorestore")
         }
+
         println("Filled")
     }
 
     @Benchmark
     @BenchmarkMode(Mode.Throughput)
     fun addUserToGroupBenchmark() {
-        val userGroup = usersToAdd.remove()
+        val userId = userCounter.getAndIncrement()
+        if (userId > (MAX_MAGNITUDE + ADDITIONAL_USERS)) {
+            throw Exception("No more users to add")
+        }
+        val userGroup = UserGroup("$USER_NAME_PREFIX$userId", "$GROUP_NAME_PREFIX$usersPreadded")
+
         if (!service.addUserToGroup(userGroup).execute().isSuccessful) {
             errors++
         }
@@ -55,7 +53,12 @@ open class GroupBenchmark : AdminBenchmark() {
     @Benchmark
     @BenchmarkMode(Mode.Throughput)
     fun deleteUserFromGroupBenchmark() {
-        val userGroup = usersToRemove.remove()
+        val userId = userCounter.getAndDecrement()
+        if (userId < 1) {
+            throw Exception("No more users to delete")
+        }
+        val userGroup = UserGroup("$USER_NAME_PREFIX$userId", "$GROUP_NAME_PREFIX$usersPreadded")
+
         if (!service.deleteUserFromGroup(userGroup).execute().isSuccessful) {
             errors++
         }
