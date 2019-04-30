@@ -16,11 +16,11 @@ open class GroupBenchmark : AdminBenchmark() {
         println("Filling database")
 
         val process = ProcessBuilder(
-            "docker run -ti --rm --network=host -v /home/ubuntu/mongobackup:/mongobackup:ro mongo:4.0.9-xenial mongorestore --host=rs0/localhost:30000 -d newtest --ssl --sslAllowInvalidCertificates --sslAllowInvalidHostnames --gzip --archive=/mongobackup/envelope-state.mongo.gz"
+            "docker run --rm --network=host -v /home/ubuntu/mongobackup:/mongobackup:ro mongo:4.0.9-xenial mongorestore --host=rs0/localhost:30000 --ssl --sslAllowInvalidCertificates --sslAllowInvalidHostnames --gzip --archive=/mongobackup/envelope-state.mongo.gz"
                 .split(' ')
         )
-            .redirectOutput(ProcessBuilder.Redirect.DISCARD)
-            .redirectError(ProcessBuilder.Redirect.DISCARD)
+            .redirectOutput(ProcessBuilder.Redirect.INHERIT)
+            .redirectError(ProcessBuilder.Redirect.INHERIT)
             .start()
 
         if (process.waitFor() != 0) {
