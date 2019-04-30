@@ -31,10 +31,20 @@ fun main(args: Array<String>) {
             .throwExceptionIfNotReallySuccessful()
 
         for (i in 2..magnitude) {
-            service
-                .addUserToGroup(UserGroup("$USER_NAME_PREFIX$i", "$GROUP_NAME_PREFIX$magnitude"))
-                .execute()
-                .throwExceptionIfNotReallySuccessful()
+            println("At user $i")
+            var success = false
+            while (!success) {
+                try {
+                    service
+                        .addUserToGroup(UserGroup("$USER_NAME_PREFIX$i", "$GROUP_NAME_PREFIX$magnitude"))
+                        .execute()
+                        .throwExceptionIfNotReallySuccessful()
+                    success = true
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    Thread.sleep(1000)
+                }
+            }
         }
         println("Group created")
 
