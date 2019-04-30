@@ -6,9 +6,6 @@ import java.util.concurrent.atomic.AtomicInteger
 
 @State(Scope.Benchmark)
 open class GroupBenchmark : AdminBenchmark() {
-    @Param("20000")
-    private var usersAmount: String = "0"
-
     @Param("0")
     private var usersPreadded: String = "0"
 
@@ -19,14 +16,11 @@ open class GroupBenchmark : AdminBenchmark() {
         println("Filling database")
 
         val process = ProcessBuilder(
-            """docker run -ti --rm --network=host -v /home/ubuntu/mongobackup:/mongobackup:ro mongo:4.0.9-xenial
-                | mongorestore --host=rs0/localhost:30000 -d newtest
-                | --ssl --sslAllowInvalidCertificates --sslAllowInvalidHostnames
-                | --gzip --archive=/mongobackup/envelope-state.mongo.gz""".trimMargin()
+            "docker run -ti --rm --network=host -v /home/ubuntu/mongobackup:/mongobackup:ro mongo:4.0.9-xenial mongorestore --host=rs0/localhost:30000 -d newtest --ssl --sslAllowInvalidCertificates --sslAllowInvalidHostnames --gzip --archive=/mongobackup/envelope-state.mongo.gz"
                 .split(' ')
         )
-            .redirectOutput(ProcessBuilder.Redirect.INHERIT)
-            .redirectError(ProcessBuilder.Redirect.INHERIT)
+            .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+            .redirectError(ProcessBuilder.Redirect.DISCARD)
             .start()
 
         if (process.waitFor() != 0) {
@@ -53,7 +47,7 @@ open class GroupBenchmark : AdminBenchmark() {
     @Benchmark
     @BenchmarkMode(Mode.Throughput)
     fun deleteUserFromGroupBenchmark() {
-        val userId = userCounter.getAndDecrement()
+        val userId = userCounter.decrementAndGet()
         if (userId < 1) {
             throw Exception("No more users to delete")
         }
