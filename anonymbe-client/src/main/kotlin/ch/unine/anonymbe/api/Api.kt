@@ -60,8 +60,10 @@ object Api {
     }
 
     val okHttpClient: OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(10, TimeUnit.SECONDS)
-        .connectionPool(ConnectionPool(15, 10, TimeUnit.SECONDS))
+        .connectTimeout(240, TimeUnit.SECONDS)
+        .readTimeout(240, TimeUnit.SECONDS)
+        .writeTimeout(240, TimeUnit.SECONDS)
+        .connectionPool(ConnectionPool(15, 60, TimeUnit.SECONDS))
         .sslSocketFactory(SSLContext.getInstance("TLS").also {
             it.init(null, arrayOf(trustAllCertificatesManager), SecureRandom())
         }.socketFactory, trustAllCertificatesManager)

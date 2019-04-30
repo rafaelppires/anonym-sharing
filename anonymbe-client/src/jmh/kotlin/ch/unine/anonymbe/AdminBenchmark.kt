@@ -20,14 +20,10 @@ abstract class AdminBenchmark {
 
     @Setup(Level.Trial)
     fun setup() {
+        Cluster.scaleService(Deployment.fromUrl(endpointUrl), 0)
         Cluster.scaleService(Deployment.fromUrl(endpointUrl), scale.toInt())
 
         service = Api.build(endpointUrl)
-    }
-
-    @TearDown(Level.Trial)
-    fun tearDown() {
-        Cluster.scaleService(Deployment.fromUrl(endpointUrl), 0)
     }
 
     @TearDown(Level.Iteration)
