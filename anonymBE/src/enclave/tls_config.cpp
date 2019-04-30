@@ -230,14 +230,22 @@ int IncomeSSLConnection::recv(char *buff, size_t len) {
 
 //------------------------------------------------------------------------------
 int IncomeSSLConnection::send(const char *buff, size_t len) {
-    int ret = SSL_write(ssl_, buff, len);
-    if (ret <= 0) {
+    int ret, i = 0, ssl_err, tries = 1000000;
+    do {
+        ++i;
+        ret = SSL_write(ssl_, buff, len);
+        ssl_err = SSL_get_error(ssl_, ret);
+    } while (ssl_err == SSL_ERROR_WANT_WRITE && i < tries);
+
+    if (ssl_err == SSL_ERROR_NONE) {
+        return 0;
+    } else {
         int e = ERR_get_error();
-        printf("ssl_write err ret:%d errno:%d: %s %s\n", ret, errno,
-               err_str(ssl_, ret), e ? ERR_error_string(e, nullptr) : "");
+        printf("ssl_write err tries:%d ret:%d errno:%d: (%s) <%s>\n", i, ret,
+               errno, err_str(ssl_, ret),
+               e ? ERR_error_string(e, nullptr) : "");
         return -1;
     }
-    return 0;
 }
 
 //------------------------------------------------------------------------------
