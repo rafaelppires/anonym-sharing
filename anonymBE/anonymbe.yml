@@ -33,9 +33,10 @@ spec:
       - name: regcred
       containers:
       - name: anonymbe-container
-        image: sebvaucher/anonymbe:0.51d
+        image: sebvaucher/anonymbe:0.59
         args:
         - "./bin/anonymbe"
+        - "--indexed=true"
         - "-m"
         - "mongodb://mongod-0.mongodb-service.default.svc.cluster.local:27017,mongod-1.mongodb-service.default.svc.cluster.local:27017,mongod-2.mongodb-service.default.svc.cluster.local:27017/?replicaSet=rs0&ssl=true&sslAllowInvalidCertificates=true&sslAllowInvalidHostnames=true"
         stdin: true
