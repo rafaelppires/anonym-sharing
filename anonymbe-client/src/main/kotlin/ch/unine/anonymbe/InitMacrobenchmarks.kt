@@ -12,6 +12,7 @@ fun main(args: Array<String>) {
     println("Bucket is empty")
 
     if (args.getOrNull(0) == "bucketonly") {
+        System.exit(0)
         return
     }
 
@@ -21,7 +22,13 @@ fun main(args: Array<String>) {
     println("No more users")
 
     println("Adding $NB_FIXED_USERS fixed users, all part of group \"$GROUP_NAME\"")
-    for (i in 0 until NB_FIXED_USERS) {
+    run {
+        val username = "${FIXED_USERS_PREFIX}0"
+        api.createUser(User(username)).execute().throwExceptionIfNotReallySuccessful()
+        api.createGroup(UserGroup(username, GROUP_NAME)).execute().throwExceptionIfNotReallySuccessful()
+    }
+
+    for (i in 1 until NB_FIXED_USERS) {
         val username = "$FIXED_USERS_PREFIX$i"
         api.createUser(User(username)).execute().throwExceptionIfNotReallySuccessful()
         api.addUserToGroup(UserGroup(username, GROUP_NAME)).execute().throwExceptionIfNotReallySuccessful()
@@ -29,6 +36,7 @@ fun main(args: Array<String>) {
     println("Users added")
 
     println("\n** Now, load the rest of the data using YCSB's load function **")
+    System.exit(0)
 }
 
 private const val GROUP_NAME = "field0"
