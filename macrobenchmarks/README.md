@@ -5,6 +5,7 @@
 * Java **11** (beware of Ubuntu's fake `openjdk-11` package which contain Java 10)
 * Maven (`mvn` command)
 * curl
+* Predictable user keys in the AnonymBE service (look for git branch)
 
 **Steps:**
 
